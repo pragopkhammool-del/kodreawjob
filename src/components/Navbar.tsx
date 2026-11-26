@@ -36,6 +36,7 @@ export function Navbar() {
     authDomainError,
     clearAuthDomainError,
     loginWithGoogle,
+    loginWithEmail,
     logout,
     showToast,
     trackLinkClick,
@@ -46,6 +47,11 @@ export function Navbar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [copiedDomain, setCopiedDomain] = useState(false);
+
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regLineId, setRegLineId] = useState('');
+  const [registering, setRegistering] = useState(false);
 
   const navLinks = [
     { label: 'เทมเพลต', path: '/templates' },
@@ -459,6 +465,71 @@ export function Navbar() {
                 >
                   Facebook / Gmail
                 </button>
+              </div>
+
+              <div className="mt-5 w-full pt-4 border-t border-orange-200 dark:border-orange-900/50 text-left">
+                <h3 className="text-xs font-bold text-[#1E1B18] dark:text-orange-100 mb-2">
+                  หรือลงทะเบียนด้วยชื่อ-อีเมล (บันทึกลงฐานข้อมูลและเข้าสู่ระบบทันที)
+                </h3>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!regName.trim() || !regEmail.trim()) {
+                      showToast({ type: 'error', title: 'กรุณากรอกชื่อและอีเมล' });
+                      return;
+                    }
+                    setRegistering(true);
+                    await loginWithEmail(regName.trim(), regEmail.trim(), regLineId.trim());
+                    setRegistering(false);
+                  }}
+                  className="space-y-2.5"
+                >
+                  <div>
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300 mb-0.5">
+                      ชื่อ-นามสกุล / ชื่อร้าน *
+                    </label>
+                    <input
+                      type="text"
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                      placeholder="เช่น คุณสมชาย ใจดี"
+                      required
+                      className="w-full px-3 py-2 rounded-xl bg-orange-50/50 dark:bg-[#2A201B] border border-orange-200 dark:border-orange-900/40 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300 mb-0.5">
+                      อีเมล *
+                    </label>
+                    <input
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="example@gmail.com"
+                      required
+                      className="w-full px-3 py-2 rounded-xl bg-orange-50/50 dark:bg-[#2A201B] border border-orange-200 dark:border-orange-900/40 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-stone-600 dark:text-stone-300 mb-0.5">
+                      LINE ID (ถ้ามี)
+                    </label>
+                    <input
+                      type="text"
+                      value={regLineId}
+                      onChange={(e) => setRegLineId(e.target.value)}
+                      placeholder="@yourlineid"
+                      className="w-full px-3 py-2 rounded-xl bg-orange-50/50 dark:bg-[#2A201B] border border-orange-200 dark:border-orange-900/40 text-xs"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={registering}
+                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow"
+                  >
+                    {registering ? 'กำลังบันทึกและเข้าสู่ระบบ...' : 'บันทึกการลงทะเบียน & เข้าสู่ระบบทันที'}
+                  </button>
+                </form>
               </div>
 
               {authDomainError && (

@@ -111,26 +111,29 @@ const communityUpload = multer({
     destination: (_req, _file, cb) => cb(null, COMMUNITY_STORAGE_DIR),
     filename: (_req, file, cb) => {
       const rawExt = path.extname(file.originalname).toLowerCase();
-      const safeExt = /^[.a-z0-9]{1,8}$/.test(rawExt)
-        ? rawExt
-        : file.mimetype.startsWith('audio/')
-          ? '.webm'
-          : '.jpg';
+      const safeExt = /^[.a-z0-9]{1,10}$/.test(rawExt) ? rawExt : '.bin';
       cb(null, `comm-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${safeExt}`);
     },
   }),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const isImage = file.mimetype.startsWith('image/');
-    const isAudio =
-      file.mimetype.startsWith('audio/') ||
-      ['.webm', '.mp3', '.m4a', '.ogg', '.wav'].includes(
-        path.extname(file.originalname).toLowerCase()
-      );
-    if (isImage || isAudio) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isImage = file.mimetype.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext);
+    const isAudio = file.mimetype.startsWith('audio/') || ['.webm', '.mp3', '.m4a', '.ogg', '.wav'].includes(ext);
+    const isDoc = [
+      '.xlsx', '.xls', '.csv', '.doc', '.docx', '.pdf', '.txt', '.zip', '.rar'
+    ].includes(ext) || [
+      'application/vnd.openxmlformats-officedocument',
+      'application/msword',
+      'application/vnd.ms-excel',
+      'application/pdf',
+      'text/',
+    ].some(prefix => file.mimetype.includes(prefix));
+
+    if (isImage || isAudio || isDoc) {
       cb(null, true);
     } else {
-      cb(new Error('อนุญาตเฉพาะไฟล์รูปภาพหรือไฟล์เสียงเท่านั้น'));
+      cb(new Error('อนุญาตเฉพาะไฟล์รูปภาพ, เสียง, Excel (.xlsx, .xls) และ Word/PDF (.doc, .docx, .pdf) ขนาดไม่เกิน 5 MB เท่านั้น'));
     }
   },
 });
@@ -830,6 +833,62 @@ async function startServer() {
     } catch (error) {
       console.error('Order lookup error:', error);
       res.status(500).json({ error: 'ไม่สามารถดึงข้อมูลคำสั่งซื้อได้' });
+    }
+  });
+
+  // Direct email / name registration & login endpoint
+  app.post('/api/auth/email-login', async (req, res) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      const email = String(req.body.email || '').trim().toLowerCase();
+      const lineId = String(req.body.lineId || '').trim();
+
+      if (!name || !email || !email.includes('@')) {
+        return res.status(400).json({ error: 'กรุณากรอกชื่อและอีเมลให้ถูกต้อง' });
+      }
+
+      const uid = `email_${crypto.createHash('md5').update(email).digest('hex')}`;
+      const defaultRole = email === 'pragopkhammool@gmail.com' ? 'admin' : 'customer';
+
+      const existing = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      let dbRecord;
+      if (existing.length > 0) {
+        const updated = await db
+          .update(users)
+          .set({
+            name,
+            lineId: lineId || existing[0].lineId,
+          })
+          .where(eq(users.email, email))
+          .returning();
+        dbRecord = updated[0];
+      } else {
+        const inserted = await db
+          .insert(users)
+          .values({
+            uid,
+            name,
+            email,
+            role: defaultRole,
+            lineId: lineId || null,
+          })
+          .returning();
+        dbRecord = inserted[0];
+      }
+
+      res.json({
+        user: dbRecord,
+        isAdmin: dbRecord.role === 'admin',
+        token: `email_token_${dbRecord.uid}`,
+      });
+    } catch (error) {
+      console.error('Email registration/login failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถบันทึกข้อมูลลงทะเบียนได้' });
     }
   });
 

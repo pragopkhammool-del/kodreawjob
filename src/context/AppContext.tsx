@@ -86,6 +86,7 @@ interface AppContextValue {
   setAuthModalOpen: (open: boolean) => void;
   authDomainError: string | null;
   clearAuthDomainError: () => void;
+  loginWithEmail: (name: string, email: string, lineId?: string) => Promise<boolean>;
   downloadProtectedFile: (downloadUrl: string, suggestedFilename?: string) => Promise<boolean>;
   downloadFreeProduct: (product: Product) => Promise<boolean>;
 }
@@ -499,6 +500,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [showToast, syncBackendOrClientUser, syncFirestoreProfile]);
 
+  const loginWithEmail = useCallback(
+    async (name: string, email: string, lineId?: string) => {
+      try {
+        const res = await fetch('/api/auth/email-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, lineId }),
+        });
+        const data = await res.json();
+        if (res.ok && data.user) {
+          setDbUser(data.user);
+          setIsAdmin(Boolean(data.isAdmin));
+          localStorage.setItem('kodreawjob_email_token', data.token);
+          setAuthModalOpen(false);
+          showToast({
+            type: 'success',
+            title: 'ลงทะเบียนและเข้าสู่ระบบสำเร็จ',
+            description: `ยินดีต้อนรับคุณ ${data.user.name} บันทึกรายชื่อลงฐานข้อมูลเรียบร้อย`,
+          });
+          return true;
+        } else {
+          showToast({ type: 'error', title: data.error || 'ไม่สามารถลงทะเบียนได้' });
+          return false;
+        }
+      } catch {
+        showToast({ type: 'error', title: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
+        return false;
+      }
+    },
+    [showToast]
+  );
+
   const logout = useCallback(async () => {
     await signOut(auth);
     idTokenRef.current = null;
@@ -703,6 +736,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAuthModalOpen,
         authDomainError,
         clearAuthDomainError,
+        loginWithEmail,
         downloadProtectedFile,
         downloadFreeProduct,
       }}

@@ -245,8 +245,8 @@ function PostCard({
   const handleCommentFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      onToast({ type: 'error', title: 'ไฟล์มีขนาดใหญ่เกินไป (จำกัดไม่เกิน 10MB)' });
+    if (file.size > 5 * 1024 * 1024) {
+      onToast({ type: 'error', title: 'ไฟล์มีขนาดใหญ่เกินไป (จำกัดไม่เกิน 5 MB)' });
       return;
     }
     setUploadingCommentFile(true);
@@ -1317,10 +1317,10 @@ export function ForumPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="cursor-pointer px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-[#2A201B] hover:bg-orange-100 text-xs font-semibold text-orange-700 dark:text-orange-300 inline-flex items-center gap-1.5">
                     <ImageIcon className="w-4 h-4" />
-                    รูปภาพ
+                    รูปภาพ/ไฟล์
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.xlsx,.xls,.doc,.docx,.pdf,.zip"
                       className="hidden"
                       onChange={async (e) => {
                         const f = e.target.files?.[0];
@@ -1749,7 +1749,7 @@ export function ForumPage() {
                     <ImageIcon className="w-4 h-4" />
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.xlsx,.xls,.doc,.docx,.pdf,.zip"
                       className="hidden"
                       onChange={async (e) => {
                         const f = e.target.files?.[0];

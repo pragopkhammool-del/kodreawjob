@@ -3423,9 +3423,6 @@ export function WebAppErpPage() {
                         referrerPolicy="no-referrer"
                         className="w-36 h-36 object-contain mx-auto"
                       />
-                      <p className="text-[10px] font-bold text-stone-700 mt-1">
-                        พร้อมเพย์ กดแล้วจบ (081-999-8888)
-                      </p>
                     </div>
                   </div>
                   <div className="md:col-span-8 space-y-3 text-xs sm:text-sm">
