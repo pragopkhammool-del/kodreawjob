@@ -580,7 +580,7 @@ export function generateMysqlErpSchemaSql(): string {
 -- Kodraewjob All-in-One Business ERP (20 Systems) — MySQL 8+ / MariaDB Schema
 -- Encoding: utf8mb4_unicode_ci (Full Thai Language Support)
 -- Import directly via phpMyAdmin
--- © 2027 Kodraewjob Digital Marketplace. By Art Kitthana2027
+-- © 2027 Kodraewjob Digital Marketplace. สงวนลิขสิทธิ์ทุกประการ
 -- ============================================================================
 
 CREATE DATABASE IF NOT EXISTS \`kodraewjob_erp\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

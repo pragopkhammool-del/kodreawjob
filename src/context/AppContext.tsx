@@ -10,6 +10,8 @@ import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/aut
 import {
   doc,
   getDoc,
+  onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -18,6 +20,8 @@ import {
   auth,
   db,
   googleAuthProvider,
+  handleFirestoreError,
+  OperationType,
   testFirestoreConnection,
 } from '../lib/firebase';
 import {
@@ -91,7 +95,8 @@ const AppContext = createContext<AppContextValue | null>(null);
 function getOrCreateVisitorToken(): string {
   const key = 'kodraewjob_visitor_id';
   let existing = localStorage.getItem(key);
-  if (!existing) {
+  const validPattern = /^[a-zA-Z0-9_\-]{8,128}$/;
+  if (!existing || !validPattern.test(existing)) {
     existing =
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
@@ -115,7 +120,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Admin passcode JWT/HMAC token kept strictly in JS memory (never localStorage/sessionStorage)
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [uniqueVisitors, setUniqueVisitors] = useState<number>(1);
+  const [pgVisitors, setPgVisitors] = useState<number>(0);
+  const [fsVisitors, setFsVisitors] = useState<number>(0);
+  const uniqueVisitors = Math.max(pgVisitors, fsVisitors);
   const idTokenRef = useRef<string | null>(null);
 
   const [cart, setCart] = useState<Product[]>(() => {
@@ -262,22 +269,94 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load categories, site config + track unique visitor + verify Firestore connection on mount
+  // Load categories, site config + real-time unique visitor counter (Firestore + Postgres)
   useEffect(() => {
     testFirestoreConnection();
     refreshCategories();
     refreshSiteConfig();
 
     const visitorToken = getOrCreateVisitorToken();
+
+    // 1. Track on Express + PostgreSQL when backend server is active
     fetchJsonSafe<{ uniqueVisitors?: number }>('/api/analytics/visit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visitorToken }),
     }).then((res) => {
       if (res.ok && typeof res.data.uniqueVisitors === 'number') {
-        setUniqueVisitors(res.data.uniqueVisitors);
+        setPgVisitors(res.data.uniqueVisitors);
       }
     });
+
+    // 2. Real-time Firestore listener + atomic unique visitor registration (works on Cloudflare Workers too)
+    const statsRef = doc(db, 'site_stats', 'visitors');
+    const visitorRef = doc(db, 'visitors', visitorToken);
+
+    const unsubscribeStats = onSnapshot(
+      statsRef,
+      (snap) => {
+        if (snap.exists()) {
+          const total = Number(snap.data()?.totalCount || 0);
+          if (Number.isFinite(total) && total > 0) {
+            setFsVisitors(total);
+          }
+        }
+      },
+      (err) => {
+        try {
+          handleFirestoreError(err, OperationType.GET, 'site_stats/visitors');
+        } catch {
+          // keep fallback Postgres count active
+        }
+      }
+    );
+
+    runTransaction(db, async (tx) => {
+      const visitorSnap = await tx.get(visitorRef);
+      if (visitorSnap.exists()) {
+        const statsSnap = await tx.get(statsRef);
+        return statsSnap.exists() ? Number(statsSnap.data()?.totalCount || 0) : 0;
+      }
+
+      const statsSnap = await tx.get(statsRef);
+      const nextCount = statsSnap.exists() ? Number(statsSnap.data()?.totalCount || 0) + 1 : 1;
+
+      tx.set(visitorRef, {
+        visitorId: visitorToken,
+        createdAt: serverTimestamp(),
+      });
+
+      if (statsSnap.exists()) {
+        tx.update(statsRef, {
+          totalCount: nextCount,
+          lastVisitorId: visitorToken,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        tx.set(statsRef, {
+          totalCount: 1,
+          lastVisitorId: visitorToken,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      return nextCount;
+    })
+      .then((count) => {
+        if (typeof count === 'number' && count > 0) {
+          setFsVisitors(count);
+        }
+      })
+      .catch((err) => {
+        try {
+          handleFirestoreError(err, OperationType.WRITE, `visitors/${visitorToken}`);
+        } catch {
+          // keep fallback Postgres count active
+        }
+      });
+
+    return () => {
+      unsubscribeStats();
+    };
   }, [refreshCategories, refreshSiteConfig]);
 
   // Sync user's public profile to Firestore for Forum / Messenger

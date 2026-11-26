@@ -112,7 +112,7 @@ export function Footer() {
               <Eye className="w-4 h-4 text-orange-400 shrink-0" />
               <span>ผู้เข้าชมเว็บไซต์จริง:</span>
               <span className="font-display font-bold text-orange-300 tabular-nums">
-                {uniqueVisitors.toLocaleString()} คน
+                {uniqueVisitors > 0 ? `${uniqueVisitors.toLocaleString()} คน` : 'กำลังนับ...'}
               </span>
             </div>
           </div>
@@ -346,7 +346,7 @@ export function Footer() {
       {/* Bottom Legal Bar */}
       <div className="border-t border-orange-950/70 py-5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-400">
-          <p>© 2027 Kodraewjob Digital Marketplace. สงวนลิขสิทธิ์ทุกประการ By Art Kitthana2027</p>
+          <p>© 2027 Kodraewjob Digital Marketplace. สงวนลิขสิทธิ์ทุกประการ</p>
           <div className="flex flex-wrap items-center gap-4">
             <span className="inline-flex items-center gap-1.5 text-stone-300">
               <ShieldCheck className="w-3.5 h-3.5 text-orange-400" />

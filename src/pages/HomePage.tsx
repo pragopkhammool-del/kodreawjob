@@ -257,6 +257,14 @@ export function HomePage() {
                   <MessageSquareHeart className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                   ฟอรั่มชุมชน
                 </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin')}
+                  className="px-5 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 hover:border-amber-500 text-amber-800 dark:text-amber-300 text-sm font-semibold inline-flex items-center gap-2 transition-all hover:-translate-y-0.5"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Admin หลังบ้าน
+                </button>
               </div>
             </div>
 

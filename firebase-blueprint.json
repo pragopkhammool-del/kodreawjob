@@ -124,6 +124,27 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["senderId", "senderName", "text", "createdAt"]
+    },
+    "VisitorRecord": {
+      "title": "VisitorRecord",
+      "description": "Unique browser visitor token record (prevents counting page refreshes)",
+      "type": "object",
+      "properties": {
+        "visitorId": { "type": "string", "minLength": 8, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["visitorId", "createdAt"]
+    },
+    "SiteVisitorStats": {
+      "title": "SiteVisitorStats",
+      "description": "Atomic unique visitor counter summary document",
+      "type": "object",
+      "properties": {
+        "totalCount": { "type": "number" },
+        "lastVisitorId": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["totalCount", "lastVisitorId", "updatedAt"]
     }
   },
   "firestore": {
@@ -162,6 +183,14 @@
     "/conversations/{convId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/DirectMessage" },
       "description": "Messages within a 1-to-1 thread"
+    },
+    "/visitors/{visitorId}": {
+      "schema": { "$ref": "#/entities/VisitorRecord" },
+      "description": "Unique visitor records deduplicated by browser token"
+    },
+    "/site_stats/{statId}": {
+      "schema": { "$ref": "#/entities/SiteVisitorStats" },
+      "description": "Global unique visitor counter document"
     }
   }
 }

@@ -134,6 +134,23 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
+    function isValidVisitor(data) {
+      return data.keys().hasAll(['visitorId', 'createdAt']) &&
+        data.keys().hasOnly(['visitorId', 'createdAt']) &&
+        data.visitorId is string && data.visitorId.size() >= 8 && data.visitorId.size() <= 128 &&
+        data.visitorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSiteVisitorStats(data) {
+      return data.keys().hasAll(['totalCount', 'lastVisitorId', 'updatedAt']) &&
+        data.keys().hasOnly(['totalCount', 'lastVisitorId', 'updatedAt']) &&
+        data.totalCount is number && data.totalCount >= 1 &&
+        data.lastVisitorId is string && data.lastVisitorId.size() >= 8 && data.lastVisitorId.size() <= 128 &&
+        data.lastVisitorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.updatedAt is timestamp;
+    }
+
     // Profiles (public display info only, no PII)
     match /profiles/{userId} {
       allow get: if isSignedIn() && isValidId(userId);
@@ -209,6 +226,22 @@ service cloud.firestore {
         allow list: if isSignedIn() && isValidId(convId) && (get(/databases/$(database)/documents/conversations/$(convId)).data.participantA == request.auth.uid || get(/databases/$(database)/documents/conversations/$(convId)).data.participantB == request.auth.uid);
         allow create: if isVerifiedUser() && isValidId(convId) && isValidId(messageId) && isValidMessage(incoming()) && incoming().createdAt == request.time && (get(/databases/$(database)/documents/conversations/$(convId)).data.participantA == request.auth.uid || get(/databases/$(database)/documents/conversations/$(convId)).data.participantB == request.auth.uid);
       }
+    }
+
+    // Unique Website Visitors (Deduplicated by Browser Token + Atomic Counter)
+    match /visitors/{visitorId} {
+      allow get: if isValidId(visitorId);
+      allow list: if false;
+      allow create: if isValidId(visitorId) && isValidVisitor(incoming()) && incoming().visitorId == visitorId && incoming().createdAt == request.time && getAfter(/databases/$(database)/documents/site_stats/visitors).data.lastVisitorId == visitorId;
+      allow update, delete: if false;
+    }
+
+    match /site_stats/{statId} {
+      allow get: if isValidId(statId) && statId == 'visitors';
+      allow list: if false;
+      allow create: if isValidId(statId) && statId == 'visitors' && isValidSiteVisitorStats(incoming()) && incoming().totalCount == 1 && incoming().updatedAt == request.time && !exists(/databases/$(database)/documents/visitors/$(incoming().lastVisitorId)) && existsAfter(/databases/$(database)/documents/visitors/$(incoming().lastVisitorId));
+      allow update: if isValidId(statId) && statId == 'visitors' && isValidSiteVisitorStats(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['totalCount', 'lastVisitorId', 'updatedAt']) && incoming().totalCount == existing().totalCount + 1 && incoming().updatedAt == request.time && !exists(/databases/$(database)/documents/visitors/$(incoming().lastVisitorId)) && existsAfter(/databases/$(database)/documents/visitors/$(incoming().lastVisitorId));
+      allow delete: if false;
     }
   }
 }

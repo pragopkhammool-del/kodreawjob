@@ -151,6 +151,16 @@ export function Navbar() {
               )}
             </button>
 
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              title="เข้าสู่ระบบจัดการหลังบ้าน (Admin)"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-400/70 bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Admin
+            </button>
+
             {dbUser ? (
               <div className="relative">
                 <button
@@ -312,6 +322,16 @@ export function Navbar() {
               className="block w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 hover:bg-orange-50 dark:hover:bg-orange-950/30"
             >
               เกี่ยวกับเรา &amp; บทความ
+            </button>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate('/admin');
+              }}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 flex items-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Admin จัดการหลังบ้าน
             </button>
             <div className="pt-2 border-t border-orange-100 dark:border-orange-900/40 flex flex-col gap-2">
               {dbUser ? (
