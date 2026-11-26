@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "MemberProfile": {
+      "title": "MemberProfile",
+      "description": "Public community profile for a logged-in forum member (PII excluded)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "bio": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "createdAt"]
+    },
+    "CommunityPage": {
+      "title": "CommunityPage",
+      "description": "User-created public page inside the Kodraewjob Forum",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 500 },
+        "coverImage": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "ownerName", "name", "category", "createdAt"]
+    },
+    "CommunityGroup": {
+      "title": "CommunityGroup",
+      "description": "User-created community group for Excel/Business discussions",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ownerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "privacy": { "type": "string", "enum": ["public", "members"] },
+        "description": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "ownerName", "name", "privacy", "createdAt"]
+    },
+    "GroupMember": {
+      "title": "GroupMember",
+      "description": "Group membership record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "joinedAt"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "Social feed post supporting text, image URL, audio URL, reactions, and comments",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "authorAvatar": { "type": "string", "maxLength": 512 },
+        "content": { "type": "string", "maxLength": 4000 },
+        "imageUrl": { "type": "string", "maxLength": 512 },
+        "audioUrl": { "type": "string", "maxLength": 512 },
+        "contextType": { "type": "string", "enum": ["feed", "page", "group"] },
+        "contextId": { "type": "string", "maxLength": 128 },
+        "contextName": { "type": "string", "maxLength": 120 },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "authorName", "content", "contextType", "likesCount", "commentsCount", "createdAt"]
+    },
+    "PostComment": {
+      "title": "PostComment",
+      "description": "Comment on a forum post",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "authorAvatar": { "type": "string", "maxLength": 512 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "authorName", "text", "createdAt"]
+    },
+    "PostReaction": {
+      "title": "PostReaction",
+      "description": "User emoji reaction on a post",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "type": { "type": "string", "enum": ["like", "love", "haha", "wow", "sad"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct messaging thread between two members",
+      "type": "object",
+      "properties": {
+        "participantA": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "participantB": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "participantAName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "participantBName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "lastMessage": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participantA", "participantB", "participantAName", "participantBName", "updatedAt"]
+    },
+    "DirectMessage": {
+      "title": "DirectMessage",
+      "description": "Message inside a direct conversation",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "text": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 512 },
+        "audioUrl": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "senderName", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/profiles/{userId}": {
+      "schema": { "$ref": "#/entities/MemberProfile" },
+      "description": "Public profile records for community members"
+    },
+    "/pages/{pageId}": {
+      "schema": { "$ref": "#/entities/CommunityPage" },
+      "description": "Community pages created by members"
+    },
+    "/groups/{groupId}": {
+      "schema": { "$ref": "#/entities/CommunityGroup" },
+      "description": "Community groups"
+    },
+    "/groups/{groupId}/members/{userId}": {
+      "schema": { "$ref": "#/entities/GroupMember" },
+      "description": "Group member subcollection"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/ForumPost" },
+      "description": "Forum social feed posts"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/PostComment" },
+      "description": "Comments under forum posts"
+    },
+    "/posts/{postId}/reactions/{userId}": {
+      "schema": { "$ref": "#/entities/PostReaction" },
+      "description": "Reactions per user on forum posts"
+    },
+    "/conversations/{convId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "1-to-1 direct message threads"
+    },
+    "/conversations/{convId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/DirectMessage" },
+      "description": "Messages within a 1-to-1 thread"
+    }
+  }
+}

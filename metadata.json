@@ -1,0 +1,6 @@
+{
+  "name": "Sutsamret Digital Marketplace",
+  "description": "ตลาดรวมไฟล์ Excel Template, Google Sheets, VBA, AppSheet และ AI Solver อันดับ 1 ของไทย ใช้งานจริงโดย 140+ ธุรกิจ พร้อมระบบชำระเงิน PromptPay QR และดาวน์โหลดทันที",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

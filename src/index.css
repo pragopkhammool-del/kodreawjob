@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Sarabun", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-navy: #1E1B18;
+  --color-orange-pastel: #FFF7ED;
+  --color-orange-surface: #FFEDD5;
+  --color-orange-brand: #F97316;
+  --color-emerald-brand: #10B981;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.soft-card {
+  box-shadow: 0 4px 20px rgba(234, 88, 12, 0.06);
+}
+
+.dark .soft-card {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .erp-print-area,
+  .erp-print-area * {
+    visibility: visible !important;
+  }
+  .erp-print-area {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 16mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    z-index: 9999 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+

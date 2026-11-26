@@ -1,0 +1,214 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection check doc
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'pragopkhammool@gmail.com';
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'bio', 'createdAt']) &&
+        data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 512)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 300)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPage(data) {
+      return data.keys().hasAll(['ownerId', 'ownerName', 'name', 'category', 'createdAt']) &&
+        data.keys().hasOnly(['ownerId', 'ownerName', 'name', 'category', 'description', 'coverImage', 'createdAt']) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 120 &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.category is string && data.category.size() >= 2 && data.category.size() <= 60 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        (!('coverImage' in data) || (data.coverImage is string && data.coverImage.size() <= 512)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidGroup(data) {
+      return data.keys().hasAll(['ownerId', 'ownerName', 'name', 'privacy', 'createdAt']) &&
+        data.keys().hasOnly(['ownerId', 'ownerName', 'name', 'privacy', 'description', 'createdAt']) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 120 &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.privacy in ['public', 'members'] &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidGroupMember(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'joinedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'joinedAt']) &&
+        data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.joinedAt is timestamp;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['authorId', 'authorName', 'content', 'contextType', 'likesCount', 'commentsCount', 'createdAt']) &&
+        data.keys().hasOnly(['authorId', 'authorName', 'authorAvatar', 'content', 'imageUrl', 'audioUrl', 'contextType', 'contextId', 'contextName', 'likesCount', 'commentsCount', 'createdAt']) &&
+        data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120 &&
+        (!('authorAvatar' in data) || (data.authorAvatar is string && data.authorAvatar.size() <= 512)) &&
+        data.content is string && data.content.size() <= 4000 &&
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 512)) &&
+        (!('audioUrl' in data) || (data.audioUrl is string && data.audioUrl.size() <= 512)) &&
+        data.contextType in ['feed', 'page', 'group'] &&
+        (!('contextId' in data) || (data.contextId is string && data.contextId.size() <= 128)) &&
+        (!('contextName' in data) || (data.contextName is string && data.contextName.size() <= 120)) &&
+        data.likesCount is number && data.likesCount >= 0 &&
+        data.commentsCount is number && data.commentsCount >= 0 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['authorId', 'authorName', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['authorId', 'authorName', 'authorAvatar', 'text', 'createdAt']) &&
+        data.authorId is string && data.authorId == request.auth.uid && data.authorId.size() <= 128 &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120 &&
+        (!('authorAvatar' in data) || (data.authorAvatar is string && data.authorAvatar.size() <= 512)) &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 1500 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidReaction(data) {
+      return data.keys().hasAll(['userId', 'type', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'type', 'createdAt']) &&
+        data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+        data.type in ['like', 'love', 'haha', 'wow', 'sad'] &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidConversation(data) {
+      return data.keys().hasAll(['participantA', 'participantB', 'participantAName', 'participantBName', 'updatedAt']) &&
+        data.keys().hasOnly(['participantA', 'participantB', 'participantAName', 'participantBName', 'lastMessage', 'updatedAt']) &&
+        data.participantA is string && data.participantA.size() >= 1 && data.participantA.size() <= 128 &&
+        data.participantB is string && data.participantB.size() >= 1 && data.participantB.size() <= 128 &&
+        data.participantAName is string && data.participantAName.size() >= 1 && data.participantAName.size() <= 120 &&
+        data.participantBName is string && data.participantBName.size() >= 1 && data.participantBName.size() <= 120 &&
+        (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['senderId', 'senderName', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['senderId', 'senderName', 'text', 'imageUrl', 'audioUrl', 'createdAt']) &&
+        data.senderId is string && data.senderId == request.auth.uid && data.senderId.size() <= 128 &&
+        data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 120 &&
+        data.text is string && data.text.size() <= 2000 &&
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 512)) &&
+        (!('audioUrl' in data) || (data.audioUrl is string && data.audioUrl.size() <= 512)) &&
+        data.createdAt is timestamp;
+    }
+
+    // Profiles (public display info only, no PII)
+    match /profiles/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn();
+      allow create: if isVerifiedUser() && isValidId(userId) && userId == request.auth.uid && isValidProfile(incoming()) && incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(userId) && userId == request.auth.uid && isValidProfile(incoming()) && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio']);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Community Pages
+    match /pages/{pageId} {
+      allow get: if isValidId(pageId);
+      allow list: if true;
+      allow create: if isVerifiedUser() && isValidId(pageId) && isValidPage(incoming()) && incoming().ownerId == request.auth.uid && incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(pageId) && isValidPage(incoming()) && (isAdmin() || (existing().ownerId == request.auth.uid && incoming().ownerId == existing().ownerId && incoming().createdAt == existing().createdAt && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'category', 'description', 'coverImage'])));
+      allow delete: if isVerifiedUser() && isValidId(pageId) && (isAdmin() || existing().ownerId == request.auth.uid);
+    }
+
+    // Community Groups & Members
+    match /groups/{groupId} {
+      allow get: if isValidId(groupId);
+      allow list: if true;
+      allow create: if isVerifiedUser() && isValidId(groupId) && isValidGroup(incoming()) && incoming().ownerId == request.auth.uid && incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(groupId) && isValidGroup(incoming()) && (isAdmin() || (existing().ownerId == request.auth.uid && incoming().ownerId == existing().ownerId && incoming().createdAt == existing().createdAt && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'privacy', 'description'])));
+      allow delete: if isVerifiedUser() && isValidId(groupId) && (isAdmin() || existing().ownerId == request.auth.uid);
+
+      match /members/{userId} {
+        allow get: if isSignedIn() && isValidId(groupId) && isValidId(userId);
+        allow list: if isSignedIn() && isValidId(groupId);
+        allow create: if isVerifiedUser() && isValidId(groupId) && isValidId(userId) && userId == request.auth.uid && isValidGroupMember(incoming()) && incoming().joinedAt == request.time && exists(/databases/$(database)/documents/groups/$(groupId));
+        allow delete: if isVerifiedUser() && isValidId(groupId) && isValidId(userId) && (userId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Forum Posts, Comments & Reactions
+    match /posts/{postId} {
+      allow get: if isValidId(postId);
+      allow list: if true;
+      allow create: if isVerifiedUser() && isValidId(postId) && isValidPost(incoming()) && incoming().authorId == request.auth.uid && incoming().likesCount == 0 && incoming().commentsCount == 0 && incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(postId) && isValidPost(incoming()) && incoming().authorId == existing().authorId && incoming().createdAt == existing().createdAt && (
+        isAdmin() ||
+        (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['content'])) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount'])
+      );
+      allow delete: if isVerifiedUser() && isValidId(postId) && (isAdmin() || existing().authorId == request.auth.uid);
+
+      match /comments/{commentId} {
+        allow get: if isValidId(postId) && isValidId(commentId);
+        allow list: if isValidId(postId);
+        allow create: if isVerifiedUser() && isValidId(postId) && isValidId(commentId) && isValidComment(incoming()) && incoming().createdAt == request.time && exists(/databases/$(database)/documents/posts/$(postId));
+        allow delete: if isVerifiedUser() && isValidId(postId) && isValidId(commentId) && (isAdmin() || existing().authorId == request.auth.uid || get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid);
+      }
+
+      match /reactions/{userId} {
+        allow get: if isValidId(postId) && isValidId(userId);
+        allow list: if isValidId(postId);
+        allow create: if isVerifiedUser() && isValidId(postId) && isValidId(userId) && userId == request.auth.uid && isValidReaction(incoming()) && incoming().createdAt == request.time && exists(/databases/$(database)/documents/posts/$(postId));
+        allow update: if isVerifiedUser() && isValidId(postId) && isValidId(userId) && userId == request.auth.uid && isValidReaction(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt && incoming().diff(existing()).affectedKeys().hasOnly(['type']);
+        allow delete: if isVerifiedUser() && isValidId(postId) && isValidId(userId) && (userId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // Direct Messages (1-to-1)
+    match /conversations/{convId} {
+      allow get: if isSignedIn() && isValidId(convId) && (existing().participantA == request.auth.uid || existing().participantB == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.participantA == request.auth.uid || resource.data.participantB == request.auth.uid);
+      allow create: if isVerifiedUser() && isValidId(convId) && isValidConversation(incoming()) && (incoming().participantA == request.auth.uid || incoming().participantB == request.auth.uid) && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(convId) && isValidConversation(incoming()) && (existing().participantA == request.auth.uid || existing().participantB == request.auth.uid) && incoming().participantA == existing().participantA && incoming().participantB == existing().participantB && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'updatedAt']) && incoming().updatedAt == request.time;
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(convId) && isValidId(messageId) && (get(/databases/$(database)/documents/conversations/$(convId)).data.participantA == request.auth.uid || get(/databases/$(database)/documents/conversations/$(convId)).data.participantB == request.auth.uid);
+        allow list: if isSignedIn() && isValidId(convId) && (get(/databases/$(database)/documents/conversations/$(convId)).data.participantA == request.auth.uid || get(/databases/$(database)/documents/conversations/$(convId)).data.participantB == request.auth.uid);
+        allow create: if isVerifiedUser() && isValidId(convId) && isValidId(messageId) && isValidMessage(incoming()) && incoming().createdAt == request.time && (get(/databases/$(database)/documents/conversations/$(convId)).data.participantA == request.auth.uid || get(/databases/$(database)/documents/conversations/$(convId)).data.participantB == request.auth.uid);
+      }
+    }
+  }
+}
