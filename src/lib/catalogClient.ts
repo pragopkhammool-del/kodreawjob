@@ -44,7 +44,7 @@ const LOCAL_PRODUCTS: Product[] = SEED_PRODUCTS.map((item, idx) => {
       item.level === 'free' ? '1.2 MB' : item.level === 'standard' ? '2.8 MB' : '4.5 MB',
     previewImage: item.previewImage,
     aiVideoUrl: item.isFeatured ? 'showcase-demo' : null,
-    downloadCount: item.downloadCount,
+    downloadCount: 0,
     ratingAvg: item.ratingAvg,
     isFeatured: Boolean(item.isFeatured),
     isBestseller: Boolean(item.isBestseller),
@@ -99,7 +99,11 @@ export function queryLocalProducts(params: LocalCatalogQuery = {}) {
     if (sort === 'price_desc') return b.price - a.price;
     if (sort === 'rating') return b.ratingAvg - a.ratingAvg;
     if (sort === 'newest') return b.id - a.id;
-    return b.downloadCount - a.downloadCount;
+    return (
+      b.downloadCount - a.downloadCount ||
+      Number(b.isFeatured) - Number(a.isFeatured) ||
+      a.id - b.id
+    );
   });
 
   const total = list.length;

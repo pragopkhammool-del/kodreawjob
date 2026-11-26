@@ -96,11 +96,12 @@ service cloud.firestore {
 
     function isValidComment(data) {
       return data.keys().hasAll(['authorId', 'authorName', 'text', 'createdAt']) &&
-        data.keys().hasOnly(['authorId', 'authorName', 'authorAvatar', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['authorId', 'authorName', 'authorAvatar', 'text', 'fileUrl', 'createdAt']) &&
         data.authorId is string && data.authorId == request.auth.uid && data.authorId.size() <= 128 &&
         data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 120 &&
         (!('authorAvatar' in data) || (data.authorAvatar is string && data.authorAvatar.size() <= 512)) &&
-        data.text is string && data.text.size() >= 1 && data.text.size() <= 1500 &&
+        data.text is string && data.text.size() >= 0 && data.text.size() <= 1500 &&
+        (!('fileUrl' in data) || (data.fileUrl is string && data.fileUrl.size() <= 512)) &&
         data.createdAt is timestamp;
     }
 

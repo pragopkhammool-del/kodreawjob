@@ -860,12 +860,12 @@ export function AdminPage() {
                 </div>
 
                 <div className="rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200/80 dark:border-orange-900/40 p-5 soft-card">
-                  <p className="text-xs text-stone-500">จำนวนคนที่กดโหลด</p>
+                  <p className="text-xs text-stone-500">จำนวนคนที่กดโหลดจริง</p>
                   <p className="font-display font-bold text-2xl text-[#1E1B18] dark:text-orange-50 mt-1 tabular-nums">
                     {stats.totalDownloads.toLocaleString()}
                   </p>
                   <p className="text-xs text-stone-400 mt-1 tabular-nums">
-                    บันทึกโหลดจริง {stats.realDownloadLogsCount.toLocaleString()} ครั้ง
+                    นับจากการดาวน์โหลดจริงเท่านั้น ({stats.realDownloadLogsCount.toLocaleString()} ครั้ง)
                   </p>
                 </div>
 

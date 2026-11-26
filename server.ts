@@ -5,7 +5,7 @@ import path from 'node:path';
 import express from 'express';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from './src/db/index.ts';
 import {
   aiGenerations,
@@ -382,7 +382,7 @@ async function startServer() {
         .select()
         .from(products)
         .where(and(...conditions))
-        .orderBy(orderClause);
+        .orderBy(orderClause, desc(products.isFeatured), asc(products.id));
 
       const total = allMatched.length;
       const offset = (page - 1) * limit;
@@ -1290,7 +1290,7 @@ async function startServer() {
       const pendingOrders = allOrders.filter((o) => o.status === 'pending');
       const totalRevenue = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
       const pendingRevenue = pendingOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-      const totalDownloads = allProducts.reduce((sum, p) => sum + p.downloadCount, 0) + allLogs.length;
+      const totalDownloads = allLogs.length;
 
       // Payment method breakdown (paid orders)
       const methodMap = new Map<string, { method: string; amount: number; count: number }>();

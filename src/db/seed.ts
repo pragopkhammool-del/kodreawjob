@@ -1,4 +1,4 @@
-import { count, eq } from 'drizzle-orm';
+import { count, eq, sql } from 'drizzle-orm';
 import { SEED_CATEGORIES, SEED_PRODUCTS } from '../data/catalogSeed.ts';
 import { db } from './index.ts';
 import {
@@ -93,6 +93,21 @@ async function runSeed(): Promise<void> {
       })
       .onConflictDoNothing({ target: paymentsSettings.provider });
     await ensureDefaultSiteAssets();
+    // One-time sync: replace historical sample download_count with real counts from download_logs
+    const syncMarker = await db
+      .select()
+      .from(siteSettings)
+      .where(eq(siteSettings.key, 'real_download_counts_synced'))
+      .limit(1);
+    if (syncMarker.length === 0) {
+      await db.execute(
+        sql`UPDATE products SET download_count = COALESCE((SELECT count(*)::int FROM download_logs WHERE download_logs.product_id = products.id), 0)`
+      );
+      await db
+        .insert(siteSettings)
+        .values({ key: 'real_download_counts_synced', valueJson: 'true' })
+        .onConflictDoNothing({ target: siteSettings.key });
+    }
     return;
   }
 
@@ -141,7 +156,7 @@ async function runSeed(): Promise<void> {
         fileSize: item.level === 'free' ? '1.2 MB' : item.level === 'standard' ? '2.8 MB' : '4.5 MB',
         previewImage: item.previewImage,
         aiVideoUrl: item.isFeatured ? 'showcase-demo' : null,
-        downloadCount: item.downloadCount,
+        downloadCount: 0,
         ratingAvg: item.ratingAvg,
         isFeatured: Boolean(item.isFeatured),
         isBestseller: Boolean(item.isBestseller),
@@ -246,4 +261,8 @@ async function runSeed(): Promise<void> {
   }
 
   await ensureDefaultSiteAssets();
+  await db
+    .insert(siteSettings)
+    .values({ key: 'real_download_counts_synced', valueJson: 'true' })
+    .onConflictDoNothing({ target: siteSettings.key });
 }

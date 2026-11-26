@@ -75,13 +75,14 @@
     },
     "PostComment": {
       "title": "PostComment",
-      "description": "Comment on a forum post",
+      "description": "Comment on a forum post supporting text and attached file/image",
       "type": "object",
       "properties": {
         "authorId": { "type": "string", "minLength": 1, "maxLength": 128 },
         "authorName": { "type": "string", "minLength": 1, "maxLength": 120 },
         "authorAvatar": { "type": "string", "maxLength": 512 },
         "text": { "type": "string", "minLength": 1, "maxLength": 1500 },
+        "fileUrl": { "type": "string", "maxLength": 512 },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["authorId", "authorName", "text", "createdAt"]

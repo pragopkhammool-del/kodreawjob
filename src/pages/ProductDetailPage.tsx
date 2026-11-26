@@ -57,7 +57,12 @@ export function ProductDetailPage({ slug }: { slug: string }) {
 
   const handleFreeDownload = async () => {
     if (!product) return;
-    await downloadFreeProduct(product);
+    const ok = await downloadFreeProduct(product);
+    if (ok) {
+      setProduct((prev) =>
+        prev ? { ...prev, downloadCount: prev.downloadCount + 1 } : prev
+      );
+    }
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {

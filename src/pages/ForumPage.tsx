@@ -94,6 +94,7 @@ interface ForumCommentItem {
   authorName: string;
   authorAvatar?: string;
   text: string;
+  fileUrl?: string;
   createdAt?: any;
 }
 
@@ -164,6 +165,10 @@ function PostCard({
   const [comments, setComments] = useState<ForumCommentItem[]>([]);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  const [commentFileUrl, setCommentFileUrl] = useState<string | null>(null);
+  const [uploadingCommentFile, setUploadingCommentFile] = useState(false);
+  const commentFileRef = useRef<HTMLInputElement | null>(null);
 
   // Subscribe to post reactions
   useEffect(() => {
@@ -237,6 +242,36 @@ function PostCard({
     }
   };
 
+  const handleCommentFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      onToast({ type: 'error', title: 'ไฟล์มีขนาดใหญ่เกินไป (จำกัดไม่เกิน 10MB)' });
+      return;
+    }
+    setUploadingCommentFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/community/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setCommentFileUrl(data.url);
+        onToast({ type: 'success', title: 'อัปโหลดไฟล์ในคอมเมนต์สำเร็จ' });
+      } else {
+        onToast({ type: 'error', title: data.error || 'อัปโหลดไฟล์ไม่สำเร็จ' });
+      }
+    } catch {
+      onToast({ type: 'error', title: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์อัปโหลดได้' });
+    } finally {
+      setUploadingCommentFile(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUid) {
@@ -244,7 +279,7 @@ function PostCard({
       return;
     }
     const text = commentText.trim();
-    if (!text) return;
+    if (!text && !commentFileUrl) return;
     setSubmittingComment(true);
     try {
       await addDoc(collection(db, 'posts', post.id, 'comments'), {
@@ -252,12 +287,14 @@ function PostCard({
         authorName: currentName.slice(0, 120),
         ...(currentAvatar ? { authorAvatar: currentAvatar.slice(0, 512) } : {}),
         text: text.slice(0, 1500),
+        ...(commentFileUrl ? { fileUrl: commentFileUrl.slice(0, 512) } : {}),
         createdAt: serverTimestamp(),
       });
       await updateDoc(doc(db, 'posts', post.id), {
         commentsCount: increment(1),
       });
       setCommentText('');
+      setCommentFileUrl(null);
       setCommentsOpen(true);
     } catch (error) {
       onToast({ type: 'error', title: 'ไม่สามารถส่งความคิดเห็นได้' });
@@ -424,25 +461,67 @@ function PostCard({
       {/* Comments Drawer */}
       {commentsOpen && (
         <div className="px-4 sm:px-5 py-4 border-t border-orange-100 dark:border-orange-900/30 bg-[#FFF7ED]/70 dark:bg-[#17120F] space-y-3 rounded-b-2xl">
-          <form onSubmit={handleAddComment} className="flex gap-2">
-            <input
-              type="text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder={
-                currentUid
-                  ? 'เขียนความคิดเห็นของคุณ...'
-                  : 'เข้าสู่ระบบด้วย Gmail เพื่อแสดงความคิดเห็น'
-              }
-              className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-[#261E1A] border border-orange-200 dark:border-orange-900/50 text-xs sm:text-sm text-[#1E1B18] dark:text-white focus:outline-none focus:border-orange-500"
-            />
-            <button
-              type="submit"
-              disabled={submittingComment}
-              className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold shrink-0"
-            >
-              ส่ง
-            </button>
+          <form onSubmit={handleAddComment} className="space-y-2">
+            {commentFileUrl && (
+              <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-[#261E1A] border border-orange-200 text-xs">
+                {commentFileUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                  <img src={commentFileUrl} alt="แนบไฟล์" className="w-12 h-12 object-cover rounded" />
+                ) : (
+                  <ImageIcon className="w-6 h-6 text-orange-500 shrink-0" />
+                )}
+                <span className="flex-1 truncate text-stone-700 dark:text-stone-200">
+                  {commentFileUrl.split('/').pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCommentFileUrl(null)}
+                  className="p-1 rounded text-rose-500 hover:bg-rose-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder={
+                  currentUid
+                    ? 'เขียนความคิดเห็นหรือแนบไฟล์...'
+                    : 'เข้าสู่ระบบด้วย Gmail เพื่อแสดงความคิดเห็น'
+                }
+                className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-[#261E1A] border border-orange-200 dark:border-orange-900/50 text-xs sm:text-sm text-[#1E1B18] dark:text-white focus:outline-none focus:border-orange-500"
+              />
+
+              <input
+                type="file"
+                ref={commentFileRef}
+                onChange={handleCommentFileChange}
+                accept="image/*,.xlsx,.xls,.pdf,.doc,.docx,.zip"
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={() => commentFileRef.current?.click()}
+                disabled={uploadingCommentFile}
+                title="อัปโหลดไฟล์ / รูปภาพในคอมเมนต์"
+                className="px-3 py-2 rounded-xl bg-orange-100 dark:bg-orange-950/60 hover:bg-orange-200 text-orange-700 dark:text-orange-300 text-xs font-semibold inline-flex items-center gap-1 shrink-0"
+              >
+                <ImageIcon className="w-4 h-4" />
+                {uploadingCommentFile ? 'กำลังอัปโหลด...' : 'แนบไฟล์'}
+              </button>
+
+              <button
+                type="submit"
+                disabled={submittingComment}
+                className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold shrink-0"
+              >
+                ส่ง
+              </button>
+            </div>
           </form>
 
           <div className="space-y-2.5 max-h-72 overflow-y-auto">
@@ -465,7 +544,7 @@ function PostCard({
                       {c.authorName.charAt(0)}
                     </div>
                   )}
-                  <div className="flex-1 rounded-2xl bg-white dark:bg-[#261E1A] border border-orange-100 dark:border-orange-900/40 px-3.5 py-2">
+                  <div className="flex-1 rounded-2xl bg-white dark:bg-[#261E1A] border border-orange-100 dark:border-orange-900/40 px-3.5 py-2 space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-display font-semibold text-xs text-[#1E1B18] dark:text-orange-100">
                         {c.authorName}
@@ -474,9 +553,33 @@ function PostCard({
                         {formatTimestamp(c.createdAt)}
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 mt-0.5">
-                      {c.text}
-                    </p>
+                    {c.text && (
+                      <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300">
+                        {c.text}
+                      </p>
+                    )}
+                    {c.fileUrl && (
+                      <div className="pt-1">
+                        {c.fileUrl.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                          <a href={c.fileUrl} target="_blank" rel="noreferrer">
+                            <img
+                              src={c.fileUrl}
+                              alt="ไฟล์แนบ"
+                              className="max-h-40 rounded-lg object-contain border border-orange-200"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={c.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/50 border border-orange-200 text-xs font-semibold text-orange-700 dark:text-orange-300 hover:underline"
+                          >
+                            <span>📎 ดาวน์โหลดไฟล์แนบ: {c.fileUrl.split('/').pop()}</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
