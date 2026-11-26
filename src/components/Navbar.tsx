@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import {
+  AlertTriangle,
+  Check,
+  Copy,
+  ExternalLink,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -13,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 const BRAND_LOGO =
   '/assets/aistudio/810624000_983971044712451_6466500635178443708_n_81f9a476.jpg';
@@ -28,6 +33,8 @@ export function Navbar() {
     cart,
     setAuthModalOpen,
     authModalOpen,
+    authDomainError,
+    clearAuthDomainError,
     loginWithGoogle,
     logout,
     showToast,
@@ -37,6 +44,7 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   const navLinks = [
     { label: 'เทมเพลต', path: '/templates' },
@@ -357,7 +365,10 @@ export function Navbar() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200 dark:border-orange-900/50 p-6 sm:p-8 soft-card animate-fade-in-up relative">
             <button
-              onClick={() => setAuthModalOpen(false)}
+              onClick={() => {
+                clearAuthDomainError();
+                setAuthModalOpen(false);
+              }}
               aria-label="ปิดหน้าต่าง"
               className="absolute top-4 right-4 p-2 rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-white"
             >
@@ -422,6 +433,44 @@ export function Navbar() {
                   Facebook / Gmail
                 </button>
               </div>
+
+              {authDomainError && (
+                <div className="mt-4 w-full rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 p-3.5 text-left space-y-2">
+                  <div className="flex items-start gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>โดเมนนี้ยังไม่ได้อนุญาตใน Firebase Console (auth/unauthorized-domain)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                    ให้นำโดเมนด้านล่างไปเพิ่มใน <strong>Authentication → Settings → Authorized domains</strong> ของโปรเจกต์ Firebase เพื่อเปิดใช้งานการล็อกอิน Google บนโดเมนนี้:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#14100E] border border-amber-300 dark:border-amber-800 text-[11px] font-mono text-[#1E1B18] dark:text-orange-100 truncate">
+                      {authDomainError}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(authDomainError);
+                        setCopiedDomain(true);
+                        setTimeout(() => setCopiedDomain(false), 2000);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 shrink-0"
+                    >
+                      {copiedDomain ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedDomain ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                    </button>
+                  </div>
+                  <a
+                    href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-700 dark:text-orange-400 hover:underline pt-0.5"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    เปิดหน้าตั้งค่า Firebase Authorized Domains ทันที
+                  </a>
+                </div>
+              )}
 
               <p className="mt-4 text-xs text-stone-500 dark:text-stone-400">
                 ปลอดภัย 100% ด้วย Firebase Authentication · ดาวน์โหลดไฟล์ได้ทันทีหลังล็อกอิน

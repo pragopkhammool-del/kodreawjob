@@ -53,6 +53,8 @@ interface AppContextValue {
   dismissToast: (id: string) => void;
   authModalOpen: boolean;
   setAuthModalOpen: (open: boolean) => void;
+  authDomainError: string | null;
+  clearAuthDomainError: () => void;
   downloadProtectedFile: (downloadUrl: string, suggestedFilename?: string) => Promise<boolean>;
   downloadFreeProduct: (product: Product) => Promise<boolean>;
 }
@@ -110,6 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authDomainError, setAuthDomainError] = useState<string | null>(null);
 
   // Sync dark mode class on <html>
   useEffect(() => {
@@ -219,6 +222,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const syncBackendOrClientUser = useCallback(async (user: User, token: string) => {
+    const authRes = await fetchJsonSafe<{ user: DbUser; isAdmin: boolean }>('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (authRes.ok && authRes.data?.user) {
+      setDbUser(authRes.data.user);
+      setIsAdmin(Boolean(authRes.data.isAdmin));
+      return;
+    }
+    const email = user.email || '';
+    setDbUser({
+      id: 0,
+      uid: user.uid,
+      name: user.displayName || email.split('@')[0] || 'สมาชิก กดแล้วจบ',
+      email,
+      avatar: user.photoURL || null,
+      role: email.toLowerCase() === 'pragopkhammool@gmail.com' ? 'admin' : 'user',
+    });
+    setIsAdmin(email.toLowerCase() === 'pragopkhammool@gmail.com');
+  }, []);
+
   // Firebase Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -227,14 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const token = await user.getIdToken();
           idTokenRef.current = token;
-          const res = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setDbUser(data.user);
-            setIsAdmin(Boolean(data.isAdmin));
-          }
+          await syncBackendOrClientUser(user, token);
           await syncFirestoreProfile(user);
         } catch {
           // Ignore transient sync error
@@ -247,7 +264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, [syncFirestoreProfile]);
+  }, [syncBackendOrClientUser, syncFirestoreProfile]);
 
   const getIdToken = useCallback(async () => {
     if (!auth.currentUser) return null;
@@ -256,19 +273,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return token;
   }, []);
 
+  const clearAuthDomainError = useCallback(() => {
+    setAuthDomainError(null);
+  }, []);
+
   const loginWithGoogle = useCallback(async () => {
     try {
+      setAuthDomainError(null);
       const result = await signInWithPopup(auth, googleAuthProvider);
       const token = await result.user.getIdToken();
       idTokenRef.current = token;
-      const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDbUser(data.user);
-        setIsAdmin(Boolean(data.isAdmin));
-      }
+      await syncBackendOrClientUser(result.user, token);
       await syncFirestoreProfile(result.user);
       setAuthModalOpen(false);
       showToast({
@@ -277,13 +292,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         description: `ยินดีต้อนรับคุณ ${result.user.displayName || result.user.email}`,
       });
     } catch (error: any) {
+      const code = String(error?.code || '');
+      if (code === 'auth/unauthorized-domain' || String(error?.message || '').includes('unauthorized-domain')) {
+        const host = window.location.hostname || 'kodreawjob.pragopkhammool.workers.dev';
+        setAuthDomainError(host);
+        setAuthModalOpen(true);
+        showToast({
+          type: 'error',
+          title: 'โดเมนนี้ยังไม่ได้อนุญาตใน Firebase Auth',
+          description: `กรุณาเพิ่มโดเมน ${host} ใน Firebase Console → Authentication → Authorized domains`,
+        });
+        return;
+      }
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        showToast({
+          type: 'info',
+          title: 'ยกเลิกการเข้าสู่ระบบ',
+          description: 'คุณได้ปิดหน้าต่างเข้าสู่ระบบ Google ก่อนดำเนินการเสร็จ',
+        });
+        return;
+      }
+      if (code === 'auth/popup-blocked') {
+        showToast({
+          type: 'error',
+          title: 'เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป',
+          description: 'กรุณาอนุญาต Popup สำหรับเว็บไซต์นี้แล้วกดเข้าสู่ระบบอีกครั้ง',
+        });
+        return;
+      }
       showToast({
         type: 'error',
         title: 'เข้าสู่ระบบไม่สำเร็จ',
         description: error?.message || 'กรุณาอนุญาตป๊อปอัปเบราว์เซอร์แล้วลองใหม่อีกครั้ง',
       });
     }
-  }, [showToast, syncFirestoreProfile]);
+  }, [showToast, syncBackendOrClientUser, syncFirestoreProfile]);
 
   const logout = useCallback(async () => {
     await signOut(auth);
@@ -480,6 +523,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dismissToast,
         authModalOpen,
         setAuthModalOpen,
+        authDomainError,
+        clearAuthDomainError,
         downloadProtectedFile,
         downloadFreeProduct,
       }}

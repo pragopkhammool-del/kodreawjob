@@ -5,7 +5,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Eye,
   FileSpreadsheet,
   LayoutDashboard,
   MessageSquareHeart,
@@ -155,7 +154,7 @@ const TESTIMONIALS = [
 ];
 
 export function HomePage() {
-  const { navigate, uniqueVisitors } = useApp();
+  const { navigate } = useApp();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroSearch, setHeroSearch] = useState('');
@@ -284,8 +283,8 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* 2. TRUST BAR + UNIQUE VISITOR COUNTER */}
-          <div className="mt-10 sm:mt-12 rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200/80 dark:border-orange-900/40 soft-card p-5 sm:p-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* 2. TRUST BAR */}
+          <div className="mt-10 sm:mt-12 rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200/80 dark:border-orange-900/40 soft-card p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
               <p className="font-display font-bold text-2xl sm:text-3xl text-[#1E1B18] dark:text-orange-50 tabular-nums">
                 140+ ธุรกิจ
@@ -300,15 +299,6 @@ export function HomePage() {
               </p>
               <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-0.5">
                 ครอบคลุมบัญชี สต๊อก HR และวิศวกรรม
-              </p>
-            </div>
-            <div>
-              <p className="font-display font-bold text-2xl sm:text-3xl text-amber-600 dark:text-amber-400 tabular-nums flex items-center gap-2">
-                <Eye className="w-6 h-6 text-orange-500 shrink-0" />
-                {uniqueVisitors.toLocaleString()} คน
-              </p>
-              <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-0.5">
-                ผู้เข้าชมเว็บไซต์จริง (ไม่นับรีเฟรช)
               </p>
             </div>
             <div>
