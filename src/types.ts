@@ -88,3 +88,29 @@ export interface ToastMessage {
   title: string;
   description?: string;
 }
+
+export interface ThemeConfig {
+  presetId: string;
+  name: string;
+  primaryColor: string;
+  primaryHover: string;
+  bgLight: string;
+  surfaceLight: string;
+  darkAccent: string;
+}
+
+export interface QrCodeItem {
+  id: number;
+  code: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  isActive: boolean;
+  updatedAt?: string;
+}
+
+export interface SiteConfig {
+  theme: ThemeConfig;
+  qrCodes: QrCodeItem[];
+}
+

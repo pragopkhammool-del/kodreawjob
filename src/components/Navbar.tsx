@@ -38,6 +38,7 @@ export function Navbar() {
     loginWithGoogle,
     logout,
     showToast,
+    trackLinkClick,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -48,9 +49,10 @@ export function Navbar() {
 
   const navLinks = [
     { label: 'เทมเพลต', path: '/templates' },
+    { label: 'ตัวอย่าง Web App', path: '/webapps-demo' },
+    { label: 'เรียนรู้ 50 สูตร', path: '/learn' },
     { label: 'Web App ERP', path: '/webapp' },
     { label: 'ฟอรั่ม', path: '/forum' },
-    { label: 'โซลูชัน', path: '/solutions' },
     { label: 'ราคา', path: '/pricing' },
     { label: 'AI แก้โจทย์', path: '/solve' },
     { label: 'ติดต่อเรา', path: '/contact' },
@@ -72,7 +74,7 @@ export function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-[#FFF7ED]/92 dark:bg-[#14100E]/92 border-b border-orange-200/80 dark:border-orange-900/40 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-4 lg:gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3 lg:gap-4">
           {/* Zone 1: Brand wordmark + logo */}
           <button
             onClick={() => navigate('/')}
@@ -95,7 +97,7 @@ export function Navbar() {
           </button>
 
           {/* Zone 2: Clean single-line navigation links */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-stone-700 dark:text-stone-300">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-5 text-xs xl:text-sm font-medium text-stone-700 dark:text-stone-300">
             {navLinks.map((link) => (
               <button
                 key={link.path}
@@ -407,13 +409,18 @@ export function Navbar() {
                   href="https://line.me/R/ti/p/@556fsrdw"
                   target="_blank"
                   rel="noreferrer"
-                  onClick={() =>
+                  onClick={() => {
+                    trackLinkClick(
+                      'line-auth-modal',
+                      'เชื่อมต่อ LINE @556fsrdw (หน้าต่างล็อกอิน)',
+                      'https://line.me/R/ti/p/@556fsrdw'
+                    );
                     showToast({
                       type: 'info',
                       title: 'เชื่อมต่อ LINE @556fsrdw',
                       description: 'แนะนำให้ล็อกอิน Gmail ด้านบนก่อนเพื่อดาวน์โหลดไฟล์ทันที',
-                    })
-                  }
+                    });
+                  }}
                   className="py-2.5 px-3 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-semibold flex items-center justify-center gap-1.5"
                 >
                   LINE @556fsrdw

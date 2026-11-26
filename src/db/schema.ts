@@ -153,6 +153,32 @@ export const siteVisitors = pgTable('site_visitors', {
   firstVisitAt: timestamp('first_visit_at').defaultNow().notNull(),
 });
 
+export const siteSettings = pgTable('site_settings', {
+  id: serial('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  valueJson: text('value_json').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const qrCodes = pgTable('qr_codes', {
+  id: serial('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  imageUrl: text('image_url').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const linkClicks = pgTable('link_clicks', {
+  id: serial('id').primaryKey(),
+  linkKey: text('link_key').notNull(),
+  label: text('label').notNull(),
+  targetUrl: text('target_url').notNull(),
+  visitorKey: text('visitor_key'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // ================= SAAS BUSINESS ERP SUITE (20 MODULES) =================
 export const erpCompanies = pgTable('erp_companies', {
   id: serial('id').primaryKey(),

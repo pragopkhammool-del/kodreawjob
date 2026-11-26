@@ -28,7 +28,13 @@ export function CartCheckoutPage({ mode }: { mode: 'cart' | 'checkout' }) {
     getIdToken,
     showToast,
     downloadProtectedFile,
+    getQrUrl,
+    siteConfig,
   } = useApp();
+  const promptpayQrUrl = getQrUrl('promptpay', PROMPTPAY_ATTACHED_QR);
+  const extraPaymentQrs = siteConfig.qrCodes.filter(
+    (q) => q.isActive && q.code !== 'promptpay' && q.code !== 'line'
+  );
 
   const [customerName, setCustomerName] = useState(dbUser?.name || '');
   const [customerEmail, setCustomerEmail] = useState(dbUser?.email || '');
@@ -219,16 +225,33 @@ export function CartCheckoutPage({ mode }: { mode: 'cart' | 'checkout' }) {
                   </div>
                 )}
 
-                <div className="pt-2 border-t border-orange-200/70 dark:border-orange-900/40">
+                <div className="pt-2 border-t border-orange-200/70 dark:border-orange-900/40 space-y-3">
                   <p className="text-xs text-stone-600 dark:text-stone-300 mb-2">
                     หรือสแกนผ่าน Thai QR PromptPay ของร้าน กดแล้วจบ (Kodraewjob):
                   </p>
                   <img
-                    src={PROMPTPAY_ATTACHED_QR}
+                    src={promptpayQrUrl}
                     alt="Thai QR Payment PromptPay กดแล้วจบ"
                     referrerPolicy="no-referrer"
                     className="w-48 mx-auto rounded-xl border border-orange-200"
                   />
+                  {extraPaymentQrs.length > 0 && (
+                    <div className="pt-2 grid grid-cols-2 gap-2">
+                      {extraPaymentQrs.map((q) => (
+                        <div key={q.id} className="bg-white rounded-xl p-2 border border-orange-200 text-center">
+                          <img
+                            src={q.imageUrl}
+                            alt={q.title}
+                            referrerPolicy="no-referrer"
+                            className="w-24 h-24 object-contain mx-auto"
+                          />
+                          <p className="text-[10px] font-semibold text-stone-700 mt-1 truncate">
+                            {q.title}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -609,7 +632,7 @@ export function CartCheckoutPage({ mode }: { mode: 'cart' | 'checkout' }) {
 
           <div className="pt-3 border-t border-orange-100 dark:border-orange-900/40 flex items-center gap-3">
             <img
-              src={PROMPTPAY_ATTACHED_QR}
+              src={promptpayQrUrl}
               alt="PromptPay Ready"
               referrerPolicy="no-referrer"
               className="w-12 h-12 rounded-lg object-cover border border-orange-200"

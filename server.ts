@@ -13,12 +13,15 @@ import {
   contacts,
   coupons,
   downloadLogs,
+  linkClicks,
   newsletterSubscribers,
   orderItems,
   orders,
   paymentsSettings,
   products,
+  qrCodes,
   reviews,
+  siteSettings,
   siteVisitors,
   users,
 } from './src/db/schema.ts';
@@ -26,9 +29,13 @@ import { ensureSeeded } from './src/db/seed.ts';
 import { adminAuth } from './src/lib/firebase-admin.ts';
 import {
   AuthRequest,
+  hashPasscodeScrypt,
   optionalAuth,
-  requireAdmin,
+  requireAdminSession,
   requireAuth,
+  signAdminSessionToken,
+  verifyEnvPasscode,
+  verifyPasscodeScrypt,
 } from './src/middleware/auth.ts';
 import {
   generateAdminSalesReportBuffer,
@@ -48,8 +55,15 @@ const STORAGE_ROOT = path.resolve(process.cwd(), 'storage');
 const PRODUCTS_STORAGE_DIR = path.resolve(STORAGE_ROOT, 'products');
 const SLIPS_STORAGE_DIR = path.resolve(STORAGE_ROOT, 'slips');
 const COMMUNITY_STORAGE_DIR = path.resolve(STORAGE_ROOT, 'community');
+const QR_STORAGE_DIR = path.resolve(STORAGE_ROOT, 'qr');
 
-for (const dir of [STORAGE_ROOT, PRODUCTS_STORAGE_DIR, SLIPS_STORAGE_DIR, COMMUNITY_STORAGE_DIR]) {
+for (const dir of [
+  STORAGE_ROOT,
+  PRODUCTS_STORAGE_DIR,
+  SLIPS_STORAGE_DIR,
+  COMMUNITY_STORAGE_DIR,
+  QR_STORAGE_DIR,
+]) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -120,6 +134,42 @@ const communityUpload = multer({
     }
   },
 });
+
+const qrUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, QR_STORAGE_DIR),
+    filename: (_req, file, cb) => {
+      const rawExt = path.extname(file.originalname).toLowerCase();
+      const safeExt = ['.png', '.jpg', '.jpeg', '.webp'].includes(rawExt) ? rawExt : '.png';
+      cb(null, `qr-${Date.now()}-${crypto.randomBytes(5).toString('hex')}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('อนุญาตเฉพาะไฟล์รูปภาพ QR Code (.png, .jpg, .webp) เท่านั้น'));
+    }
+  },
+});
+
+const adminLoginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+const DEFAULT_THEME_CONFIG = {
+  presetId: 'orange-pastel',
+  name: 'Orange Light พาสเทล (ค่าเริ่มต้น)',
+  primaryColor: '#F97316',
+  primaryHover: '#EA580C',
+  bgLight: '#FFF7ED',
+  surfaceLight: '#FFEDD5',
+  darkAccent: '#231915',
+};
+
+function sanitizeHexColor(value: unknown, fallback: string): string {
+  const s = String(value || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(s) ? s.toUpperCase() : fallback;
+}
 
 function sanitizeFileAccess(baseDir: string, targetPath: string): string | null {
   const resolved = path.resolve(baseDir, path.basename(targetPath));
@@ -208,6 +258,71 @@ async function startServer() {
       return res.status(404).json({ error: 'ไม่พบไฟล์ที่ต้องการ' });
     }
     return res.sendFile(safePath);
+  });
+
+  // Serve admin-uploaded QR codes safely with path confinement
+  app.get('/uploads/qr/:filename', (req, res) => {
+    const safePath = sanitizeFileAccess(QR_STORAGE_DIR, req.params.filename);
+    if (!safePath || !fs.existsSync(safePath)) {
+      return res.status(404).json({ error: 'ไม่พบรูปภาพ QR Code' });
+    }
+    return res.sendFile(safePath);
+  });
+
+  // Public Site Config (theme colors + active QR codes — never leaks passcode hashes)
+  app.get('/api/site-config', async (_req, res) => {
+    try {
+      await ensureSeeded();
+      const [themeRows, qrRows] = await Promise.all([
+        db.select().from(siteSettings).where(eq(siteSettings.key, 'theme_config')).limit(1),
+        db.select().from(qrCodes).where(eq(qrCodes.isActive, true)).orderBy(qrCodes.id),
+      ]);
+      let theme = DEFAULT_THEME_CONFIG;
+      if (themeRows[0]?.valueJson) {
+        try {
+          theme = { ...DEFAULT_THEME_CONFIG, ...JSON.parse(themeRows[0].valueJson) };
+        } catch {
+          theme = DEFAULT_THEME_CONFIG;
+        }
+      }
+      res.json({ theme, qrCodes: qrRows });
+    } catch (error) {
+      console.error('Failed to load site config:', error);
+      res.json({ theme: DEFAULT_THEME_CONFIG, qrCodes: [] });
+    }
+  });
+
+  // Real Link Click Tracking
+  app.post('/api/analytics/click', async (req, res) => {
+    try {
+      const linkKey = String(req.body?.linkKey || '').trim().slice(0, 80);
+      const label = String(req.body?.label || '').trim().slice(0, 160);
+      const targetUrl = String(req.body?.targetUrl || '').trim().slice(0, 500);
+      const visitorToken = String(req.body?.visitorToken || '').trim();
+
+      if (!linkKey || !label || !targetUrl) {
+        return res.status(400).json({ error: 'ข้อมูลลิงก์ไม่ครบถ้วน' });
+      }
+
+      const visitorKey = visitorToken
+        ? crypto.createHash('sha256').update(`tok:${visitorToken}`).digest('hex')
+        : crypto
+            .createHash('sha256')
+            .update(`net:${req.ip || 'unknown'}:${req.get('user-agent') || 'ua'}`)
+            .digest('hex');
+
+      await db.insert(linkClicks).values({
+        linkKey,
+        label,
+        targetUrl,
+        visitorKey,
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Link click tracking error:', error);
+      res.status(500).json({ error: 'ไม่สามารถบันทึกการคลิกลิงก์ได้' });
+    }
   });
 
   // Categories
@@ -1014,18 +1129,202 @@ async function startServer() {
     }
   });
 
+  // ================= ADMIN PASSCODE AUTH =================
+  app.get('/api/admin/auth/status', async (_req, res) => {
+    try {
+      const envPass = process.env.ADMIN_PASSCODE?.trim();
+      if (envPass) {
+        return res.json({ mode: 'env', needsSetup: false });
+      }
+      const rows = await db
+        .select()
+        .from(siteSettings)
+        .where(eq(siteSettings.key, 'admin_passcode_hash'))
+        .limit(1);
+      if (rows.length === 0) {
+        return res.json({ mode: 'claim', needsSetup: true });
+      }
+      return res.json({ mode: 'stored', needsSetup: false });
+    } catch (error) {
+      console.error('Admin auth status failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถตรวจสอบสถานะผู้ดูแลได้' });
+    }
+  });
+
+  app.post('/api/admin/auth/claim', async (req, res) => {
+    try {
+      const envPass = process.env.ADMIN_PASSCODE?.trim();
+      if (envPass) {
+        return res.status(409).json({
+          error: 'ระบบตั้งรหัสผ่านผ่านตัวแปรสภาพแวดล้อมไว้แล้ว กรุณาเข้าสู่ระบบตามปกติ',
+        });
+      }
+      const passcode = String(req.body?.passcode || '').trim();
+      if (passcode.length < 6 || passcode.length > 64) {
+        return res.status(400).json({ error: 'รหัสแอดมินต้องมีความยาว 6-64 ตัวอักษร' });
+      }
+
+      const hashed = hashPasscodeScrypt(passcode);
+      const inserted = await db
+        .insert(siteSettings)
+        .values({
+          key: 'admin_passcode_hash',
+          valueJson: JSON.stringify({ hash: hashed }),
+        })
+        .onConflictDoNothing({ target: siteSettings.key })
+        .returning();
+
+      if (inserted.length === 0) {
+        return res.status(409).json({ error: 'รหัสแอดมินถูกตั้งค่าแล้ว กรุณาล็อกอินด้วยรหัสที่ตั้งไว้' });
+      }
+
+      const session = signAdminSessionToken();
+      return res.status(201).json({ adminToken: session.token, expiresInMs: session.expiresInMs });
+    } catch (error) {
+      console.error('Admin passcode claim failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถตั้งรหัสผ่านแอดมินได้' });
+    }
+  });
+
+  app.post('/api/admin/auth/login', async (req, res) => {
+    try {
+      const ipKey = req.ip || 'unknown';
+      const now = Date.now();
+      const attempt = adminLoginAttempts.get(ipKey);
+      if (attempt && attempt.resetAt > now && attempt.count >= 15) {
+        return res
+          .status(429)
+          .json({ error: 'ลองผิดเกินจำนวนที่กำหนด กรุณารอ 10 นาทีแล้วลองใหม่' });
+      }
+
+      const passcode = String(req.body?.passcode || '').trim();
+      if (!passcode) {
+        return res.status(400).json({ error: 'กรุณากรอกรหัสเข้าสู่ระบบแอดมิน' });
+      }
+
+      const envPass = process.env.ADMIN_PASSCODE?.trim();
+      let isValid = false;
+      if (envPass) {
+        isValid = verifyEnvPasscode(passcode, envPass);
+      } else {
+        const rows = await db
+          .select()
+          .from(siteSettings)
+          .where(eq(siteSettings.key, 'admin_passcode_hash'))
+          .limit(1);
+        if (rows.length === 0) {
+          return res.status(409).json({
+            error: 'ยังไม่ได้ตั้งค่ารหัสผ่านแอดมินเริ่มต้น กรุณาตั้งรหัสครั้งแรกก่อน',
+            needsSetup: true,
+          });
+        }
+        try {
+          const parsed = JSON.parse(rows[0].valueJson);
+          if (typeof parsed?.hash === 'string') {
+            isValid = verifyPasscodeScrypt(passcode, parsed.hash);
+          }
+        } catch {
+          isValid = false;
+        }
+      }
+
+      if (!isValid) {
+        const nextCount = attempt && attempt.resetAt > now ? attempt.count + 1 : 1;
+        adminLoginAttempts.set(ipKey, { count: nextCount, resetAt: now + 10 * 60 * 1000 });
+        return res.status(401).json({ error: 'รหัสแอดมินไม่ถูกต้อง' });
+      }
+
+      adminLoginAttempts.delete(ipKey);
+      const session = signAdminSessionToken();
+      return res.json({ adminToken: session.token, expiresInMs: session.expiresInMs });
+    } catch (error) {
+      console.error('Admin passcode login failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถเข้าสู่ระบบแอดมินได้' });
+    }
+  });
+
+  app.post('/api/admin/auth/change-passcode', requireAdminSession, async (req, res) => {
+    try {
+      const envPass = process.env.ADMIN_PASSCODE?.trim();
+      if (envPass) {
+        return res.status(400).json({
+          error: 'รหัสแอดมินถูกกำหนดผ่านค่า Secrets ของเซิร์ฟเวอร์ (ADMIN_PASSCODE) อยู่แล้ว',
+        });
+      }
+      const newPasscode = String(req.body?.newPasscode || '').trim();
+      if (newPasscode.length < 6 || newPasscode.length > 64) {
+        return res.status(400).json({ error: 'รหัสใหม่ต้องมีความยาว 6-64 ตัวอักษร' });
+      }
+      const hashed = hashPasscodeScrypt(newPasscode);
+      await db
+        .insert(siteSettings)
+        .values({
+          key: 'admin_passcode_hash',
+          valueJson: JSON.stringify({ hash: hashed }),
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: siteSettings.key,
+          set: { valueJson: JSON.stringify({ hash: hashed }), updatedAt: new Date() },
+        });
+      res.json({ ok: true, message: 'อัปเดตรหัสผ่านแอดมินเรียบร้อยแล้ว' });
+    } catch (error) {
+      console.error('Change admin passcode error:', error);
+      res.status(500).json({ error: 'ไม่สามารถเปลี่ยนรหัสแอดมินได้' });
+    }
+  });
+
   // ================= ADMIN ROUTES =================
-  app.get('/api/admin/stats', requireAuth, requireAdmin, async (_req, res) => {
+  app.get('/api/admin/stats', requireAdminSession, async (_req, res) => {
     try {
       await ensureSeeded();
-      const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
-      const allProducts = await db.select().from(products);
-      const allUsers = await db.select().from(users);
-      const allLogs = await db.select().from(downloadLogs);
+      const [allOrders, allProducts, allUsers, allLogs, allClicks] = await Promise.all([
+        db.select().from(orders).orderBy(desc(orders.createdAt)),
+        db.select().from(products),
+        db.select().from(users),
+        db.select().from(downloadLogs),
+        db.select().from(linkClicks).orderBy(desc(linkClicks.createdAt)),
+      ]);
 
       const paidOrders = allOrders.filter((o) => o.status === 'paid');
+      const pendingOrders = allOrders.filter((o) => o.status === 'pending');
       const totalRevenue = paidOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+      const pendingRevenue = pendingOrders.reduce((sum, o) => sum + o.totalAmount, 0);
       const totalDownloads = allProducts.reduce((sum, p) => sum + p.downloadCount, 0) + allLogs.length;
+
+      // Payment method breakdown (paid orders)
+      const methodMap = new Map<string, { method: string; amount: number; count: number }>();
+      for (const ord of paidOrders) {
+        const key = ord.paymentMethod || 'promptpay';
+        const cur = methodMap.get(key) || { method: key, amount: 0, count: 0 };
+        cur.amount += ord.totalAmount;
+        cur.count += 1;
+        methodMap.set(key, cur);
+      }
+
+      // Link clicks breakdown
+      const clickMap = new Map<
+        string,
+        { linkKey: string; label: string; targetUrl: string; clicks: number; lastClickedAt: Date }
+      >();
+      for (const c of allClicks) {
+        const cur = clickMap.get(c.linkKey);
+        if (!cur) {
+          clickMap.set(c.linkKey, {
+            linkKey: c.linkKey,
+            label: c.label,
+            targetUrl: c.targetUrl,
+            clicks: 1,
+            lastClickedAt: c.createdAt,
+          });
+        } else {
+          cur.clicks += 1;
+          if (new Date(c.createdAt) > new Date(cur.lastClickedAt)) {
+            cur.lastClickedAt = c.createdAt;
+          }
+        }
+      }
+      const linkClicksBreakdown = Array.from(clickMap.values()).sort((a, b) => b.clicks - a.clicks);
 
       // Build 7-day sales chart
       const days: Array<{ label: string; revenue: number; orders: number }> = [];
@@ -1049,10 +1348,16 @@ async function startServer() {
 
       res.json({
         totalRevenue,
+        pendingRevenue,
         totalOrders: allOrders.length,
         paidOrdersCount: paidOrders.length,
-        pendingOrdersCount: allOrders.filter((o) => o.status === 'pending').length,
+        pendingOrdersCount: pendingOrders.length,
+        paymentMethodBreakdown: Array.from(methodMap.values()),
         totalDownloads,
+        realDownloadLogsCount: allLogs.length,
+        totalLinkClicks: allClicks.length,
+        linkClicksBreakdown,
+        recentLinkClicks: allClicks.slice(0, 20),
         totalCustomers: Math.max(140, allUsers.length + 140),
         registeredUsersCount: allUsers.length,
         totalProducts: allProducts.length,
@@ -1065,7 +1370,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/orders', requireAuth, requireAdmin, async (_req, res) => {
+  app.get('/api/admin/orders', requireAdminSession, async (_req, res) => {
     try {
       const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
       res.json(allOrders);
@@ -1075,7 +1380,7 @@ async function startServer() {
     }
   });
 
-  app.patch('/api/admin/orders/:id/status', requireAuth, requireAdmin, async (req, res) => {
+  app.patch('/api/admin/orders/:id/status', requireAdminSession, async (req, res) => {
     try {
       const id = Number(req.params.id);
       const status = String(req.body.status || '');
@@ -1097,7 +1402,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/customers', requireAuth, requireAdmin, async (_req, res) => {
+  app.get('/api/admin/customers', requireAdminSession, async (_req, res) => {
     try {
       const list = await db.select().from(users).orderBy(desc(users.createdAt));
       res.json(list);
@@ -1109,8 +1414,7 @@ async function startServer() {
 
   app.post(
     '/api/admin/products',
-    requireAuth,
-    requireAdmin,
+    requireAdminSession,
     excelUpload.single('file'),
     async (req, res) => {
       try {
@@ -1165,7 +1469,7 @@ async function startServer() {
     }
   );
 
-  app.put('/api/admin/products/:id', requireAuth, requireAdmin, async (req, res) => {
+  app.put('/api/admin/products/:id', requireAdminSession, async (req, res) => {
     try {
       const id = Number(req.params.id);
       const { title, description, price, level, categoryId, isFeatured, isBestseller, status } = req.body;
@@ -1190,7 +1494,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/admin/products/:id', requireAuth, requireAdmin, async (req, res) => {
+  app.delete('/api/admin/products/:id', requireAdminSession, async (req, res) => {
     try {
       const id = Number(req.params.id);
       await db.update(products).set({ status: 'archived' }).where(eq(products.id, id));
@@ -1201,7 +1505,215 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/payments', requireAuth, requireAdmin, async (_req, res) => {
+  app.put('/api/admin/theme', requireAdminSession, async (req, res) => {
+    try {
+      const nextTheme = {
+        presetId: String(req.body?.presetId || 'custom').slice(0, 60),
+        name: String(req.body?.name || 'ธีมปรับแต่งเอง').slice(0, 120),
+        primaryColor: sanitizeHexColor(req.body?.primaryColor, DEFAULT_THEME_CONFIG.primaryColor),
+        primaryHover: sanitizeHexColor(req.body?.primaryHover, DEFAULT_THEME_CONFIG.primaryHover),
+        bgLight: sanitizeHexColor(req.body?.bgLight, DEFAULT_THEME_CONFIG.bgLight),
+        surfaceLight: sanitizeHexColor(req.body?.surfaceLight, DEFAULT_THEME_CONFIG.surfaceLight),
+        darkAccent: sanitizeHexColor(req.body?.darkAccent, DEFAULT_THEME_CONFIG.darkAccent),
+      };
+
+      await db
+        .insert(siteSettings)
+        .values({
+          key: 'theme_config',
+          valueJson: JSON.stringify(nextTheme),
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: siteSettings.key,
+          set: { valueJson: JSON.stringify(nextTheme), updatedAt: new Date() },
+        });
+
+      res.json(nextTheme);
+    } catch (error) {
+      console.error('Admin update theme failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถบันทึกสีเทมเพลตได้' });
+    }
+  });
+
+  app.get('/api/admin/qrs', requireAdminSession, async (_req, res) => {
+    try {
+      await ensureSeeded();
+      const rows = await db.select().from(qrCodes).orderBy(qrCodes.id);
+      res.json(rows);
+    } catch (error) {
+      console.error('Admin get QRs failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถโหลดรายการ QR Code ได้' });
+    }
+  });
+
+  app.post('/api/admin/qrs', requireAdminSession, (req, res) => {
+    qrUpload.single('qrImage')(req, res, async (err: any) => {
+      if (err) {
+        return res.status(400).json({ error: err.message || 'อัปโหลดรูปภาพ QR ไม่สำเร็จ' });
+      }
+      try {
+        await ensureSeeded();
+        const rawCode = String(req.body?.code || '').trim().toLowerCase();
+        const code =
+          rawCode.replace(/[^a-z0-9_-]/g, '') || `qr-${Date.now().toString(36)}`;
+        const title = String(req.body?.title || '').trim();
+        const description = String(req.body?.description || '').trim();
+        const isActive = req.body?.isActive !== 'false' && req.body?.isActive !== false;
+
+        if (!title) {
+          return res.status(400).json({ error: 'กรุณาระบุชื่อ QR Code' });
+        }
+
+        const existing = await db
+          .select()
+          .from(qrCodes)
+          .where(eq(qrCodes.code, code))
+          .limit(1);
+
+        const imageUrl = req.file
+          ? `/uploads/qr/${req.file.filename}`
+          : String(req.body?.imageUrl || existing[0]?.imageUrl || '').trim();
+
+        if (!imageUrl) {
+          return res.status(400).json({ error: 'กรุณาอัปโหลดไฟล์รูปภาพ QR Code' });
+        }
+
+        const saved = await db
+          .insert(qrCodes)
+          .values({
+            code,
+            title,
+            description,
+            imageUrl,
+            isActive,
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: qrCodes.code,
+            set: {
+              title,
+              description,
+              imageUrl,
+              isActive,
+              updatedAt: new Date(),
+            },
+          })
+          .returning();
+
+        if (code === 'promptpay') {
+          const ppRow = await db
+            .select()
+            .from(paymentsSettings)
+            .where(eq(paymentsSettings.provider, 'promptpay'))
+            .limit(1);
+          const currentCfg = ppRow[0]?.configJson
+            ? JSON.parse(ppRow[0].configJson)
+            : {
+                promptpayId: '0819998888',
+                accountName: 'กดแล้วจบ (Kodraewjob Digital Marketplace)',
+              };
+          await db
+            .insert(paymentsSettings)
+            .values({
+              provider: 'promptpay',
+              configJson: JSON.stringify({ ...currentCfg, qrImageUrl: imageUrl }),
+              isActive: true,
+              updatedAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: paymentsSettings.provider,
+              set: {
+                configJson: JSON.stringify({ ...currentCfg, qrImageUrl: imageUrl }),
+                updatedAt: new Date(),
+              },
+            });
+        }
+
+        res.json(saved[0]);
+      } catch (error) {
+        console.error('Admin save QR failed:', error);
+        res.status(500).json({ error: 'ไม่สามารถบันทึก QR Code ได้' });
+      }
+    });
+  });
+
+  app.delete('/api/admin/qrs/:id', requireAdminSession, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const found = await db.select().from(qrCodes).where(eq(qrCodes.id, id)).limit(1);
+      if (found.length === 0) {
+        return res.status(404).json({ error: 'ไม่พบรายการ QR Code' });
+      }
+      if (found[0].code === 'promptpay' || found[0].code === 'line') {
+        return res.status(400).json({
+          error: 'ไม่สามารถลบ QR หลักของระบบ (PromptPay/LINE) ได้ กรุณาอัปโหลดรูปใหม่ทับแทน',
+        });
+      }
+      await db.delete(qrCodes).where(eq(qrCodes.id, id));
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Admin delete QR failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถลบ QR Code ได้' });
+    }
+  });
+
+  app.put('/api/admin/categories/:id', requireAdminSession, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const name = String(req.body?.name || '').trim();
+      const icon = String(req.body?.icon || '').trim();
+      const description = String(req.body?.description || '').trim();
+
+      if (!name || !description) {
+        return res.status(400).json({ error: 'กรุณากรอกชื่อและคำอธิบายหมวดหมู่' });
+      }
+
+      const updated = await db
+        .update(categories)
+        .set({
+          name,
+          icon: icon || 'FileSpreadsheet',
+          description,
+        })
+        .where(eq(categories.id, id))
+        .returning();
+
+      if (updated.length === 0) {
+        return res.status(404).json({ error: 'ไม่พบหมวดหมู่ที่ต้องการแก้ไข' });
+      }
+      res.json(updated[0]);
+    } catch (error) {
+      console.error('Admin update category failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถแก้ไขหมวดหมู่ได้' });
+    }
+  });
+
+  app.post('/api/admin/categories', requireAdminSession, async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const rawSlug = String(req.body?.slug || '').trim().toLowerCase();
+      const icon = String(req.body?.icon || 'FileSpreadsheet').trim();
+      const description = String(req.body?.description || '').trim();
+
+      if (!name || !description) {
+        return res.status(400).json({ error: 'กรุณากรอกชื่อและคำอธิบายหมวดหมู่' });
+      }
+      const slug =
+        rawSlug.replace(/[^a-z0-9-]/g, '-') || `cat-${Date.now().toString(36)}`;
+
+      const created = await db
+        .insert(categories)
+        .values({ name, slug, icon, description })
+        .returning();
+      res.status(201).json(created[0]);
+    } catch (error) {
+      console.error('Admin create category failed:', error);
+      res.status(500).json({ error: 'ไม่สามารถเพิ่มหมวดหมู่ได้ (Slug อาจซ้ำ)' });
+    }
+  });
+
+  app.get('/api/admin/payments', requireAdminSession, async (_req, res) => {
     try {
       await ensureSeeded();
       const rows = await db.select().from(paymentsSettings).orderBy(paymentsSettings.id);
@@ -1212,7 +1724,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/payments', requireAuth, requireAdmin, async (req, res) => {
+  app.put('/api/admin/payments', requireAdminSession, async (req, res) => {
     try {
       const { provider, configJson, isActive } = req.body;
       const updated = await db
@@ -1239,7 +1751,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/ai/generate', requireAuth, requireAdmin, async (req, res) => {
+  app.post('/api/admin/ai/generate', requireAdminSession, async (req, res) => {
     try {
       const { title, category, level, productId } = req.body;
       const generated = await generateProductDescriptionAI({
@@ -1263,7 +1775,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/admin/reports/export', requireAuth, requireAdmin, async (_req, res) => {
+  app.get('/api/admin/reports/export', requireAdminSession, async (_req, res) => {
     try {
       const list = await db.select().from(orders).orderBy(desc(orders.createdAt));
       const buffer = await generateAdminSalesReportBuffer(list);

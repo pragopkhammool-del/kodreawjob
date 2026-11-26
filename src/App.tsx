@@ -14,10 +14,14 @@ import { DashboardPage } from './pages/DashboardPage';
 import { AdminPage } from './pages/AdminPage';
 import { ForumPage } from './pages/ForumPage';
 import { WebAppErpPage } from './pages/WebAppErpPage';
+import { LearnFormulasPage } from './pages/LearnFormulasPage';
+import { WebAppsDemoPage } from './pages/WebAppsDemoPage';
 import {
   AboutPage,
   BlogPage,
+  CoffeeSupportPage,
   ContactPage,
+  LegalDocumentPage,
   PricingPage,
   SolutionsPage,
 } from './pages/InfoPages';
@@ -28,6 +32,24 @@ function MainRouter() {
 
   if (pathname === '/' || pathname === '') {
     return <HomePage />;
+  }
+  if (pathname === '/learn') {
+    return <LearnFormulasPage />;
+  }
+  if (pathname === '/webapps-demo') {
+    return <WebAppsDemoPage />;
+  }
+  if (pathname === '/coffee') {
+    return <CoffeeSupportPage />;
+  }
+  if (pathname === '/legal/file-license') {
+    return <LegalDocumentPage mode="file-license" />;
+  }
+  if (pathname === '/legal/terms') {
+    return <LegalDocumentPage mode="terms" />;
+  }
+  if (pathname === '/legal/pdpa') {
+    return <LegalDocumentPage mode="pdpa" />;
   }
   if (pathname === '/forum') {
     return <ForumPage />;
@@ -92,7 +114,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppProvider>
-        <div className="min-h-screen flex flex-col bg-[#FFF7ED] text-[#1E1B18] dark:bg-[#14100E] dark:text-orange-50 transition-colors">
+        <div className="min-h-screen flex flex-col app-shell-bg bg-[#FFF7ED] text-[#1E1B18] dark:bg-[#14100E] dark:text-orange-50 transition-colors">
           <Navbar />
           <main className="flex-1">
             <MainRouter />

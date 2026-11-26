@@ -154,7 +154,7 @@ const TESTIMONIALS = [
 ];
 
 export function HomePage() {
-  const { navigate } = useApp();
+  const { navigate, categories, getQrUrl, trackLinkClick } = useApp();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroSearch, setHeroSearch] = useState('');
@@ -335,6 +335,7 @@ export function HomePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {CATEGORY_CARDS.map((cat) => {
+            const liveCat = categories.find((c) => c.slug === cat.slug);
             const Icon = cat.icon;
             return (
               <button
@@ -352,14 +353,14 @@ export function HomePage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-display font-bold text-base text-[#1E1B18] dark:text-orange-50 truncate">
-                      {cat.name}
+                      {liveCat?.name || cat.name}
                     </h3>
                     <span className="text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0">
                       {cat.count}
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 mt-1 line-clamp-2">
-                    {cat.desc}
+                    {liveCat?.description || cat.desc}
                   </p>
                 </div>
               </button>
@@ -755,6 +756,13 @@ export function HomePage() {
                 href="https://line.me/R/ti/p/@556fsrdw"
                 target="_blank"
                 rel="noreferrer"
+                onClick={() =>
+                  trackLinkClick(
+                    'line-home-cta',
+                    'เพิ่มเพื่อน LINE @556fsrdw (หน้าแรก)',
+                    'https://line.me/R/ti/p/@556fsrdw'
+                  )
+                }
                 className="px-6 py-3 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white text-sm font-bold inline-flex items-center gap-2 transition-colors"
               >
                 เพิ่มเพื่อน LINE @556fsrdw
@@ -772,7 +780,7 @@ export function HomePage() {
           <div className="lg:col-span-4 flex justify-center lg:justify-end">
             <div className="rounded-2xl bg-white p-4 text-center max-w-[230px] shadow-xl">
               <img
-                src={LINE_QR}
+                src={getQrUrl('line', LINE_QR)}
                 alt="QR Code LINE Official @556fsrdw"
                 referrerPolicy="no-referrer"
                 className="w-44 h-44 object-contain mx-auto"

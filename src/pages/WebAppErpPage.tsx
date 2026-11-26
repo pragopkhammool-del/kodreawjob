@@ -151,7 +151,7 @@ const DEFAULT_PREFIXES = {
 };
 
 export function WebAppErpPage() {
-  const { dbUser, getIdToken, setAuthModalOpen, showToast, navigate } = useApp();
+  const { dbUser, getIdToken, setAuthModalOpen, showToast, navigate, getQrUrl } = useApp();
 
   const [activeModule, setActiveModule] = useState<string>('bi_dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -3418,7 +3418,7 @@ export function WebAppErpPage() {
                   <div className="md:col-span-4 flex justify-center">
                     <div className="bg-white rounded-xl p-2 border border-orange-200 text-center">
                       <img
-                        src={PROMPTPAY_QR}
+                        src={getQrUrl('promptpay', PROMPTPAY_QR)}
                         alt="PromptPay QR"
                         referrerPolicy="no-referrer"
                         className="w-36 h-36 object-contain mx-auto"

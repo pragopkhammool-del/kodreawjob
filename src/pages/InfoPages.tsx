@@ -5,9 +5,11 @@ import {
   BookOpen,
   Building,
   Check,
+  Coffee,
   Layers,
   Mail,
   MessageCircle,
+  ShieldCheck,
   Sigma,
   Sparkles,
   Users,
@@ -900,7 +902,7 @@ export function BlogPage() {
 }
 
 export function ContactPage() {
-  const { showToast, navigate } = useApp();
+  const { showToast, navigate, getQrUrl, trackLinkClick } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -952,7 +954,7 @@ export function ContactPage() {
 
         <div className="bg-white rounded-2xl p-5 text-center text-[#1E1B18]">
           <img
-            src={LINE_QR}
+            src={getQrUrl('line', LINE_QR)}
             alt="LINE OA @556fsrdw"
             referrerPolicy="no-referrer"
             className="w-44 h-44 mx-auto object-contain"
@@ -962,6 +964,13 @@ export function ContactPage() {
             href="https://line.me/R/ti/p/@556fsrdw"
             target="_blank"
             rel="noreferrer"
+            onClick={() =>
+              trackLinkClick(
+                'line-contact-page',
+                'เพิ่มเพื่อน LINE @556fsrdw (หน้าติดต่อ)',
+                'https://line.me/R/ti/p/@556fsrdw'
+              )
+            }
             className="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white text-sm font-semibold"
           >
             <MessageCircle className="w-4 h-4" />
@@ -1048,6 +1057,223 @@ export function ContactPage() {
           {sending ? 'กำลังส่ง...' : 'ส่งข้อความ'}
         </button>
       </form>
+    </div>
+  );
+}
+
+const DEFAULT_PROMPTPAY_QR = '/assets/aistudio/Untitled_e84a513c.jpg';
+
+export function CoffeeSupportPage() {
+  const { getQrUrl, navigate, showToast, trackLinkClick } = useApp();
+  const [amount, setAmount] = useState(99);
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+      <div className="rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200/80 dark:border-orange-900/40 p-6 sm:p-10 soft-card text-center space-y-6">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+          <Coffee className="w-7 h-7" />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+            SUPPORT THE CREATOR · กดแล้วจบ
+          </p>
+          <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#1E1B18] dark:text-orange-50">
+            เลี้ยงกาแฟผู้พัฒนาเพื่อเป็นกำลังใจทำเทมเพลตและบทเรียนฟรี
+          </h1>
+          <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed max-w-xl mx-auto">
+            หากคู่มือ 50 สูตร Excel, Ebook ฟรี หรือระบบตัวอย่าง Web App ช่วยให้งานของคุณเร็วขึ้น สามารถสนับสนุนค่ากาแฟทีมพัฒนาได้ผ่าน PromptPay QR ด้านล่างครับ
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2.5">
+          {[49, 99, 199, 399].map((val) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setAmount(val)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold tabular-nums transition-colors ${
+                amount === val
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-orange-50 dark:bg-[#2A201B] border border-orange-200 dark:border-orange-900/50 text-[#1E1B18] dark:text-orange-100'
+              }`}
+            >
+              ☕ ฿{val}
+            </button>
+          ))}
+        </div>
+
+        <div className="max-w-xs mx-auto rounded-2xl bg-white p-5 border border-orange-200 shadow-sm space-y-3 text-[#1E1B18]">
+          <img
+            src={getQrUrl('promptpay', DEFAULT_PROMPTPAY_QR)}
+            alt="PromptPay QR สนับสนุนค่ากาแฟ กดแล้วจบ"
+            referrerPolicy="no-referrer"
+            className="w-52 h-52 mx-auto object-contain"
+          />
+          <p className="font-display font-bold text-base tabular-nums">
+            ยอดแนะนำ: ฿{amount.toLocaleString()}
+          </p>
+          <p className="text-xs text-stone-500">สแกนผ่านแอปธนาคารใดก็ได้ (PromptPay)</p>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() =>
+              showToast({
+                type: 'success',
+                title: 'ขอบคุณสำหรับกำลังใจครับ!',
+                description: 'แจ้งสลิปหรือขอสูตรเพิ่มเติมทาง LINE @556fsrdw ได้เลยครับ',
+              })
+            }
+            className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold"
+          >
+            โอนสนับสนุนแล้ว ❤️
+          </button>
+          <a
+            href="https://line.me/R/ti/p/@556fsrdw"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() =>
+              trackLinkClick('line-coffee-support', 'ทัก LINE หน้าเลี้ยงกาแฟ', 'https://line.me/R/ti/p/@556fsrdw')
+            }
+            className="px-5 py-2.5 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white text-sm font-bold inline-flex items-center gap-1.5"
+          >
+            <MessageCircle className="w-4 h-4" />
+            แจ้งหรือทัก LINE @556fsrdw
+          </a>
+          <button
+            type="button"
+            onClick={() => navigate('/learn')}
+            className="px-5 py-2.5 rounded-xl border border-orange-200 dark:border-orange-900/50 text-sm font-semibold"
+          >
+            กลับหน้าเรียนรู้ 50 สูตร
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LegalDocumentPage({ mode }: { mode: 'file-license' | 'terms' | 'pdpa' }) {
+  const { navigate } = useApp();
+
+  const docs = {
+    'file-license': {
+      badge: 'FILE LICENSE AGREEMENT',
+      title: 'เงื่อนไขการใช้ไฟล์เทมเพลต Excel, VBA และ Google Sheets',
+      updated: 'อัปเดตล่าสุด: พฤศจิกายน 2026',
+      sections: [
+        {
+          heading: '1. สิทธิ์การใช้งานที่อนุญาต (Permitted Use)',
+          body: 'ผู้ซื้อหรือผู้ดาวน์โหลดไฟล์ฟรีที่ล็อกอินยืนยันตัวตนแล้ว มีสิทธิ์ใช้งาน ปรับแต่งหัวเอกสาร เพิ่มโลโก้ร้าน และนำไปใช้ในงานส่วนตัวหรือภายในกิจการของตนเองได้ไม่จำกัดระยะเวลา',
+        },
+        {
+          heading: '2. ข้อห้ามในการเผยแพร่ต่อ (Restrictions)',
+          body: 'ไม่อนุญาตให้นำไฟล์ต้นฉบับ สูตรโครงสร้าง หรือซอร์สโค้ด VBA/AppSheet ไปจำหน่ายต่อ แจกจ่ายซ้ำบนเว็บไซต์อื่น หรือแอบอ้างเป็นผลงานของตนเองในเชิงพาณิชย์โดยไม่ได้รับอนุญาตเป็นลายลักษณ์อักษรจาก Kodraewjob',
+        },
+        {
+          heading: '3. การอัปเดตและการรับประกันความถูกต้อง',
+          body: 'เรามุ่งมั่นตรวจสอบสูตรบัญชีและภาษีตามกฎหมายไทยอย่างต่อเนื่อง หากพบข้อขัดข้องในการใช้งานหรือสูตรเสียหายจากการแก้ไข สามารถติดต่อทีมงานผ่าน LINE @556fsrdw เพื่อรับคำแนะนำและไฟล์ซ่อมแซมได้ทันที',
+        },
+      ],
+    },
+    terms: {
+      badge: 'TERMS OF SERVICE',
+      title: 'ข้อตกลงการใช้งานเว็บไซต์และระบบ Web Application',
+      updated: 'อัปเดตล่าสุด: พฤศจิกายน 2026',
+      sections: [
+        {
+          heading: '1. บัญชีผู้ใช้และการดาวน์โหลด',
+          body: 'การใช้งานระบบดาวน์โหลดเทมเพลต ฟอรั่มชุมชน และการสร้าง Workspace ใน Web App ERP ต้องเข้าสู่ระบบผ่านบัญชีที่ยืนยันตัวตนได้จริงเพื่อความปลอดภัยและบันทึกสิทธิ์การดาวน์โหลดย้อนหลัง',
+        },
+        {
+          heading: '2. ระบบทดลองใช้ฟรี 30 วัน และแพ็กเกจสมาชิก',
+          body: 'ผู้ใช้งาน Web App SaaS สามารถทดลองใช้งานฟรีตามโควต้าที่กำหนด และสามารถเลือกอัปเกรดเป็นแพ็กเกจรายเดือนหรือรายปีเมื่อพร้อมใช้งานจริง โดยข้อมูลบริษัทและเอกสารทั้งหมดจะถูกเก็บรักษาต่อเนื่อง',
+        },
+        {
+          heading: '3. มารยาทการใช้งานฟอรั่มชุมชน',
+          body: 'สมาชิกสามารถแลกเปลี่ยนความรู้ ตั้งคำถามสูตร Excel แชร์ไฟล์ตัวอย่าง หรือโพสต์สอบถามปัญหาได้อย่างสุภาพ ห้ามโพสต์สแปม เนื้อหาผิดกฎหมาย หรือการหลอกลวงใด ๆ ในชุมชน',
+        },
+      ],
+    },
+    pdpa: {
+      badge: 'PRIVACY POLICY (PDPA)',
+      title: 'นโยบายความเป็นส่วนตัวและการคุ้มครองข้อมูลส่วนบุคคล (PDPA)',
+      updated: 'อัปเดตล่าสุด: พฤศจิกายน 2026',
+      sections: [
+        {
+          heading: '1. ข้อมูลส่วนบุคคลที่เราเก็บรวบรวม',
+          body: 'เราเก็บเฉพาะข้อมูลที่จำเป็นต่อการให้บริการ ได้แก่ ชื่อ-นามสกุล อีเมล รูปโปรไฟล์จากการเข้าสู่ระบบ Google ประวัติการสั่งซื้อ/ดาวน์โหลด และข้อมูลบริษัทที่คุณกรอกเองในระบบ Web App ERP',
+        },
+        {
+          heading: '2. วัตถุประสงค์การใช้ข้อมูลและความปลอดภัย',
+          body: 'ข้อมูลทั้งหมดใช้เพื่อยืนยันสิทธิ์ดาวน์โหลด แจ้งเตือนวันหมดอายุแพ็กเกจ และให้การสนับสนุนลูกค้าเท่านั้น ไม่มีการจำหน่ายหรือเปิดเผยข้อมูลลูกค้าแก่บุคคลภายนอกโดยไม่ได้รับความยินยอม',
+        },
+        {
+          heading: '3. สิทธิ์ของเจ้าของข้อมูลตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล',
+          body: 'คุณสามารถขอตรวจสอบ แก้ไข หรือขอลบบัญชีและข้อมูลบริษัทออกจากระบบได้ทุกเมื่อ ผ่านหน้าติดต่อเรา หรือ LINE Official: @556fsrdw',
+        },
+      ],
+    },
+  };
+
+  const current = docs[mode];
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
+      <div className="rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200/80 dark:border-orange-900/40 p-6 sm:p-10 soft-card space-y-6">
+        <div className="border-b border-orange-100 dark:border-orange-900/40 pb-5">
+          <p className="text-xs font-bold tracking-wider uppercase text-orange-600 dark:text-orange-400 inline-flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4" />
+            {current.badge}
+          </p>
+          <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#1E1B18] dark:text-orange-50 mt-2">
+            {current.title}
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">{current.updated}</p>
+        </div>
+
+        <div className="space-y-6">
+          {current.sections.map((sec) => (
+            <div key={sec.heading} className="space-y-2">
+              <h2 className="font-display font-bold text-lg text-[#1E1B18] dark:text-orange-50">
+                {sec.heading}
+              </h2>
+              <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">{sec.body}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="pt-4 border-t border-orange-100 dark:border-orange-900/40 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/legal/file-license')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold ${
+              mode === 'file-license' ? 'bg-orange-500 text-white' : 'bg-orange-50 dark:bg-[#2A201B]'
+            }`}
+          >
+            เงื่อนไขการใช้ไฟล์
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/legal/terms')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold ${
+              mode === 'terms' ? 'bg-orange-500 text-white' : 'bg-orange-50 dark:bg-[#2A201B]'
+            }`}
+          >
+            ข้อตกลงการใช้งาน
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/legal/pdpa')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold ${
+              mode === 'pdpa' ? 'bg-orange-500 text-white' : 'bg-orange-50 dark:bg-[#2A201B]'
+            }`}
+          >
+            นโยบายความเป็นส่วนตัว (PDPA)
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

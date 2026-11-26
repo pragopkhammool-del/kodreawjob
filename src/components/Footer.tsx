@@ -37,7 +37,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-[#231915] text-stone-300 border-t border-orange-950/60">
+    <footer className="theme-dark-surface bg-[#231915] text-stone-300 border-t border-orange-950/60">
       {/* Newsletter Band */}
       <div className="border-b border-orange-900/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
@@ -80,8 +80,8 @@ export function Footer() {
         </div>
       </div>
 
-      {/* 4 Columns */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      {/* 5 Columns: Brand, หมวดอาชีพ, ข้อมูล, หมวดหมู่ & ชุมชน, ติดต่อ & สถิติ */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
         <div>
           <div className="flex items-center gap-2.5 mb-4">
             <img
@@ -97,14 +97,186 @@ export function Footer() {
               <p className="text-xs text-orange-400">Kodraewjob Digital Marketplace</p>
             </div>
           </div>
-          <p className="text-sm text-stone-400 leading-relaxed">
-            ศูนย์รวมเทมเพลต Excel, Google Sheets, VBA, AppSheet และเครื่องมือ AI คำนวณวิศวกรรมสำหรับธุรกิจไทย ใช้งานจริงโดย 140+ องค์กร
+          <p className="text-xs sm:text-sm text-stone-400 leading-relaxed">
+            ศูนย์รวมเทมเพลต Excel, Google Sheets, VBA, AppSheet และ Web App ธุรกิจไทย ใช้งานจริงโดย 140+ องค์กร
           </p>
+          <div className="mt-4 space-y-2 text-xs text-stone-300">
+            <button
+              onClick={() => navigate('/contact')}
+              className="flex items-center gap-2 text-orange-400 hover:text-orange-300 font-medium"
+            >
+              <MessageCircle className="w-4 h-4" />
+              LINE Official: @556fsrdw
+            </button>
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-orange-400 shrink-0" />
+              <span>ผู้เข้าชมเว็บไซต์จริง:</span>
+              <span className="font-display font-bold text-orange-300 tabular-nums">
+                {uniqueVisitors.toLocaleString()} คน
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-display font-semibold text-white mb-4">หมวดอาชีพ</h4>
+          <ul className="space-y-2 text-xs sm:text-sm text-stone-400">
+            <li>
+              <button
+                onClick={() => navigate('/templates?search=การเงิน')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                การเงินส่วนตัว
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/webapps-demo?app=online_seller')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                ร้านค้า / SME / แม่ค้าออนไลน์
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/templates?search=ขาย')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                ฝ่ายขาย / จัดซื้อ
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/webapps-demo?app=payroll')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                HR / เงินเดือน
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/templates?search=เกรด')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                ครู / การศึกษา
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/webapps-demo?app=dorm')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                อสังหา / ห้องเช่า
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/templates?search=โปรเจกต์')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                งานออฟฟิศ / โปรเจกต์
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/templates?search=งานแต่ง')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                ชีวิต / งานอีเวนต์
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="font-display font-semibold text-white mb-4">ข้อมูล</h4>
+          <ul className="space-y-2 text-xs sm:text-sm text-stone-400">
+            <li>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                แพ็กรวม &amp; สมาชิกรายปี
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/webapp')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                ใส่โลโก้ร้านลงในไฟล์อัตโนมัติ
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/contact')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                รับปรับไฟล์ Excel ให้ตรงงาน
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/webapps-demo')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                รับทำแอป / ระบบเฉพาะร้าน
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/learn?ebook=30-formulas')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                Ebook ฟรี: 30 สูตร Excel ใช้จริง
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/learn')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                คลังสูตร Excel ภาษาไทย
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/coffee')}
+                className="hover:text-orange-300 text-amber-300 transition-colors text-left font-medium"
+              >
+                ☕ เลี้ยงกาแฟผู้พัฒนา
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/legal/file-license')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                เงื่อนไขการใช้ไฟล์
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/legal/terms')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                ข้อตกลงการใช้งาน
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate('/legal/pdpa')}
+                className="hover:text-orange-400 transition-colors text-left"
+              >
+                นโยบายความเป็นส่วนตัว (PDPA)
+              </button>
+            </li>
+          </ul>
         </div>
 
         <div>
           <h4 className="font-display font-semibold text-white mb-4">หมวดหมู่ยอดนิยม</h4>
-          <ul className="space-y-2.5 text-sm text-stone-400">
+          <ul className="space-y-2 text-xs sm:text-sm text-stone-400">
             <li>
               <button onClick={() => navigate('/category/excel')} className="hover:text-orange-400 transition-colors">
                 Excel Templates ธุรกิจ
@@ -130,12 +302,17 @@ export function Footer() {
                 AI Solver แก้โจทย์วิศวกรรม
               </button>
             </li>
+            <li>
+              <button onClick={() => navigate('/solutions')} className="hover:text-orange-400 transition-colors">
+                โซลูชันเฉพาะทาง (BOM / โครงสร้าง)
+              </button>
+            </li>
           </ul>
         </div>
 
         <div>
-          <h4 className="font-display font-semibold text-white mb-4">ชุมชนและบริการ</h4>
-          <ul className="space-y-2.5 text-sm text-stone-400">
+          <h4 className="font-display font-semibold text-white mb-4">ชุมชน &amp; ช่องทางชำระเงิน</h4>
+          <ul className="space-y-2 text-xs sm:text-sm text-stone-400 mb-4">
             <li>
               <button onClick={() => navigate('/forum')} className="hover:text-orange-400 transition-colors">
                 ฟอรั่มชุมชน &amp; แชทสมาชิก
@@ -143,17 +320,7 @@ export function Footer() {
             </li>
             <li>
               <button onClick={() => navigate('/templates')} className="hover:text-orange-400 transition-colors">
-                รวมเทมเพลตทั้งหมด (59 รายการ)
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigate('/pricing')} className="hover:text-orange-400 transition-colors">
-                แพ็กเกจราคา ฟรี / 99 / 199
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigate('/solutions')} className="hover:text-orange-400 transition-colors">
-                โซลูชันเฉพาะทาง (BOM / โครงสร้าง)
+                รวมเทมเพลตทั้งหมด (59+ ไฟล์)
               </button>
             </li>
             <li>
@@ -162,36 +329,16 @@ export function Footer() {
               </button>
             </li>
           </ul>
-        </div>
-
-        <div>
-          <h4 className="font-display font-semibold text-white mb-4">ช่องทางติดต่อ &amp; สถิติเว็บ</h4>
-          <div className="space-y-3 text-sm text-stone-400">
-            <button
-              onClick={() => navigate('/contact')}
-              className="flex items-center gap-2 text-orange-400 hover:text-orange-300 font-medium"
-            >
-              <MessageCircle className="w-4 h-4" />
-              LINE Official: @556fsrdw
-            </button>
-            <div className="flex items-center gap-2 text-xs text-stone-300">
-              <Eye className="w-4 h-4 text-orange-400" />
-              <span>ผู้เข้าชมเว็บไซต์จริง (Unique):</span>
-              <span className="font-display font-bold text-orange-300 tabular-nums">
-                {uniqueVisitors.toLocaleString()} คน
-              </span>
-            </div>
-            <div className="pt-1 flex flex-wrap gap-2 text-xs text-stone-300">
-              <span className="px-2.5 py-1 rounded-md bg-[#1A120F] border border-orange-900/50">
-                PromptPay QR
-              </span>
-              <span className="px-2.5 py-1 rounded-md bg-[#1A120F] border border-orange-900/50">
-                KBANK / SCB / BBL / KTB
-              </span>
-              <span className="px-2.5 py-1 rounded-md bg-[#1A120F] border border-orange-900/50">
-                TrueMoney
-              </span>
-            </div>
+          <div className="flex flex-wrap gap-1.5 text-[11px] text-stone-300">
+            <span className="px-2 py-1 rounded-md bg-[#1A120F] border border-orange-900/50">
+              PromptPay QR
+            </span>
+            <span className="px-2 py-1 rounded-md bg-[#1A120F] border border-orange-900/50">
+              KBANK / SCB / BBL
+            </span>
+            <span className="px-2 py-1 rounded-md bg-[#1A120F] border border-orange-900/50">
+              TrueMoney
+            </span>
           </div>
         </div>
       </div>
@@ -200,11 +347,18 @@ export function Footer() {
       <div className="border-t border-orange-950/70 py-5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-400">
           <p>© 2027 Kodraewjob Digital Marketplace. สงวนลิขสิทธิ์ทุกประการ By Art Kitthana2027</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="inline-flex items-center gap-1.5 text-stone-300">
               <ShieldCheck className="w-3.5 h-3.5 text-orange-400" />
               SSL Secured &amp; Login-Verified Download
             </span>
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              className="text-stone-400 hover:text-orange-300 underline underline-offset-4 transition-colors"
+            >
+              แอดมินจัดการหลังบ้าน
+            </button>
           </div>
         </div>
       </div>

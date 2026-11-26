@@ -6,8 +6,51 @@ import {
   coupons,
   paymentsSettings,
   products,
+  qrCodes,
   reviews,
+  siteSettings,
 } from './schema.ts';
+
+async function ensureDefaultSiteAssets(): Promise<void> {
+  await db
+    .insert(siteSettings)
+    .values({
+      key: 'theme_config',
+      valueJson: JSON.stringify({
+        presetId: 'orange-pastel',
+        name: 'Orange Light พาสเทล (ค่าเริ่มต้น)',
+        primaryColor: '#F97316',
+        primaryHover: '#EA580C',
+        bgLight: '#FFF7ED',
+        surfaceLight: '#FFEDD5',
+        darkAccent: '#231915',
+      }),
+    })
+    .onConflictDoNothing({ target: siteSettings.key });
+
+  const defaultQrs = [
+    {
+      code: 'promptpay',
+      title: 'Thai QR Payment (PromptPay หลัก)',
+      description: 'สแกนชำระเงินทุกธนาคาร ไม่มีค่าธรรมเนียม',
+      imageUrl: '/assets/aistudio/Untitled_e84a513c.jpg',
+      isActive: true,
+    },
+    {
+      code: 'line',
+      title: 'LINE Official Group (@556fsrdw)',
+      description: 'สแกนเข้ากลุ่มลูกค้า และติดต่อสอบถามแอดมินโดยตรง',
+      imageUrl: '/assets/aistudio/L_556fsrdw_GW_6a59b22f.png',
+      isActive: true,
+    },
+  ];
+  for (const qr of defaultQrs) {
+    await db
+      .insert(qrCodes)
+      .values(qr)
+      .onConflictDoNothing({ target: qrCodes.code });
+  }
+}
 
 let seedPromise: Promise<void> | null = null;
 
@@ -38,15 +81,18 @@ async function runSeed(): Promise<void> {
       .values({ code: 'KODRAEWJOB10', discountType: 'percent', discountValue: 10, usageLimit: 500 })
       .onConflictDoNothing({ target: coupons.code });
     await db
-      .update(paymentsSettings)
-      .set({
+      .insert(paymentsSettings)
+      .values({
+        provider: 'promptpay',
         configJson: JSON.stringify({
           promptpayId: '0819998888',
           accountName: 'กดแล้วจบ (Kodraewjob Digital Marketplace)',
           qrImageUrl: '/assets/aistudio/Untitled_e84a513c.jpg',
         }),
+        isActive: true,
       })
-      .where(eq(paymentsSettings.provider, 'promptpay'));
+      .onConflictDoNothing({ target: paymentsSettings.provider });
+    await ensureDefaultSiteAssets();
     return;
   }
 
@@ -198,4 +244,6 @@ async function runSeed(): Promise<void> {
       });
     }
   }
+
+  await ensureDefaultSiteAssets();
 }

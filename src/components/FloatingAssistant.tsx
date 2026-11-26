@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Bot, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 const LINE_QR_URL = '/assets/aistudio/L_556fsrdw_GW_6a59b22f.png';
 
 export function FloatingAssistant() {
+  const { getQrUrl, trackLinkClick } = useApp();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'line' | 'ai'>('line');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'bot'; text: string }>>([
@@ -96,7 +98,7 @@ export function FloatingAssistant() {
             <div className="p-5 text-center space-y-3">
               <div className="inline-block p-3 rounded-2xl bg-white border border-orange-200">
                 <img
-                  src={LINE_QR_URL}
+                  src={getQrUrl('line', LINE_QR_URL)}
                   alt="QR Code LINE Official @556fsrdw"
                   referrerPolicy="no-referrer"
                   className="w-44 h-44 object-contain mx-auto"
@@ -115,6 +117,13 @@ export function FloatingAssistant() {
                 href="https://line.me/R/ti/p/@556fsrdw"
                 target="_blank"
                 rel="noreferrer"
+                onClick={() =>
+                  trackLinkClick(
+                    'line-floating-widget',
+                    'เพิ่มเพื่อน LINE @556fsrdw (กล่องแชทมุมจอ)',
+                    'https://line.me/R/ti/p/@556fsrdw'
+                  )
+                }
                 className="block w-full py-2.5 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white text-sm font-semibold transition-colors"
               >
                 เพิ่มเพื่อน LINE @556fsrdw

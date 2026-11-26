@@ -8,7 +8,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { navigate, addToCart, cart, wishlist, toggleWishlist, downloadFreeProduct } = useApp();
+  const { navigate, addToCart, cart, wishlist, toggleWishlist, downloadFreeProduct, trackLinkClick } = useApp();
   const [imgError, setImgError] = useState(false);
 
   const inCart = cart.some((item) => item.id === product.id);
@@ -16,12 +16,16 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const handleInstantFreeDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    trackLinkClick(`free-dl:${product.slug}`, `ดาวน์โหลดฟรี: ${product.title}`, `/templates/${product.slug}`);
     await downloadFreeProduct(product);
   };
 
   return (
     <article
-      onClick={() => navigate(`/templates/${product.slug}`)}
+      onClick={() => {
+        trackLinkClick(`view:${product.slug}`, `เปิดดู: ${product.title}`, `/templates/${product.slug}`);
+        navigate(`/templates/${product.slug}`);
+      }}
       className="group cursor-pointer rounded-2xl bg-white dark:bg-[#1F1815] border border-orange-200/70 dark:border-orange-900/40 soft-card overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1 hover:border-orange-400"
     >
       {/* 4:3 Image Frame */}

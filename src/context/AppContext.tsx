@@ -26,7 +26,27 @@ import {
   getLocalCategories,
   resolveApiUrl,
 } from '../lib/catalogClient';
-import { Category, DbUser, Product, ToastMessage } from '../types';
+import {
+  Category,
+  DbUser,
+  Product,
+  SiteConfig,
+  ThemeConfig,
+  ToastMessage,
+} from '../types';
+
+export const DEFAULT_THEME_CONFIG: ThemeConfig = {
+  presetId: 'orange-pastel',
+  name: 'Orange Light พาสเทล (ค่าเริ่มต้น)',
+  primaryColor: '#F97316',
+  primaryHover: '#EA580C',
+  bgLight: '#FFF7ED',
+  surfaceLight: '#FFEDD5',
+  darkAccent: '#231915',
+};
+
+const DEFAULT_PROMPTPAY_QR = '/assets/aistudio/Untitled_e84a513c.jpg';
+const DEFAULT_LINE_QR = '/assets/aistudio/L_556fsrdw_GW_6a59b22f.png';
 
 interface AppContextValue {
   route: string;
@@ -36,6 +56,8 @@ interface AppContextValue {
   firebaseUser: User | null;
   dbUser: DbUser | null;
   isAdmin: boolean;
+  adminToken: string | null;
+  setAdminToken: (token: string | null) => void;
   authLoading: boolean;
   getIdToken: () => Promise<string | null>;
   loginWithGoogle: () => Promise<void>;
@@ -47,6 +69,11 @@ interface AppContextValue {
   wishlist: number[];
   toggleWishlist: (productId: number) => void;
   categories: Category[];
+  refreshCategories: () => Promise<void>;
+  siteConfig: SiteConfig;
+  refreshSiteConfig: () => Promise<void>;
+  getQrUrl: (code: 'promptpay' | 'line' | string, fallback?: string) => string;
+  trackLinkClick: (linkKey: string, label: string, targetUrl: string) => void;
   uniqueVisitors: number;
   toasts: ToastMessage[];
   showToast: (toast: Omit<ToastMessage, 'id'>) => void;
@@ -85,6 +112,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Admin passcode JWT/HMAC token kept strictly in JS memory (never localStorage/sessionStorage)
+  const [adminToken, setAdminToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [uniqueVisitors, setUniqueVisitors] = useState<number>(1);
   const idTokenRef = useRef<string | null>(null);
@@ -110,6 +139,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>({
+    theme: DEFAULT_THEME_CONFIG,
+    qrCodes: [],
+  });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authDomainError, setAuthDomainError] = useState<string | null>(null);
@@ -164,17 +197,76 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Load categories + track unique visitor + verify Firestore connection on mount
+  const applyThemeToDocument = useCallback((theme: ThemeConfig) => {
+    const root = document.documentElement;
+    root.style.setProperty('--theme-primary', theme.primaryColor || DEFAULT_THEME_CONFIG.primaryColor);
+    root.style.setProperty('--theme-primary-hover', theme.primaryHover || DEFAULT_THEME_CONFIG.primaryHover);
+    root.style.setProperty('--theme-bg-light', theme.bgLight || DEFAULT_THEME_CONFIG.bgLight);
+    root.style.setProperty('--theme-surface-light', theme.surfaceLight || DEFAULT_THEME_CONFIG.surfaceLight);
+    root.style.setProperty('--theme-dark-accent', theme.darkAccent || DEFAULT_THEME_CONFIG.darkAccent);
+    const isCustom =
+      theme.presetId !== 'orange-pastel' ||
+      theme.primaryColor.toUpperCase() !== DEFAULT_THEME_CONFIG.primaryColor;
+    if (isCustom) {
+      root.setAttribute('data-custom-theme', 'true');
+    } else {
+      root.removeAttribute('data-custom-theme');
+    }
+  }, []);
+
+  const refreshCategories = useCallback(async () => {
+    const res = await fetchJsonSafe<Category[]>('/api/categories');
+    if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+      setCategories(res.data);
+    } else {
+      setCategories(getLocalCategories());
+    }
+  }, []);
+
+  const refreshSiteConfig = useCallback(async () => {
+    const res = await fetchJsonSafe<SiteConfig>('/api/site-config');
+    if (res.ok && res.data?.theme) {
+      setSiteConfig({
+        theme: { ...DEFAULT_THEME_CONFIG, ...res.data.theme },
+        qrCodes: Array.isArray(res.data.qrCodes) ? res.data.qrCodes : [],
+      });
+      applyThemeToDocument({ ...DEFAULT_THEME_CONFIG, ...res.data.theme });
+    }
+  }, [applyThemeToDocument]);
+
+  const getQrUrl = useCallback(
+    (code: 'promptpay' | 'line' | string, fallback?: string): string => {
+      const matched = siteConfig.qrCodes.find((q) => q.code === code && q.isActive);
+      if (matched?.imageUrl) return resolveApiUrl(matched.imageUrl);
+      if (fallback) return fallback;
+      if (code === 'promptpay') return DEFAULT_PROMPTPAY_QR;
+      if (code === 'line') return DEFAULT_LINE_QR;
+      return DEFAULT_PROMPTPAY_QR;
+    },
+    [siteConfig.qrCodes]
+  );
+
+  const trackLinkClick = useCallback((linkKey: string, label: string, targetUrl: string) => {
+    try {
+      const visitorToken = getOrCreateVisitorToken();
+      const payload = JSON.stringify({ linkKey, label, targetUrl, visitorToken });
+      const endpoint = resolveApiUrl('/api/analytics/click');
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      // ignore analytics error
+    }
+  }, []);
+
+  // Load categories, site config + track unique visitor + verify Firestore connection on mount
   useEffect(() => {
     testFirestoreConnection();
-
-    fetchJsonSafe<Category[]>('/api/categories').then((res) => {
-      if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
-        setCategories(res.data);
-      } else {
-        setCategories(getLocalCategories());
-      }
-    });
+    refreshCategories();
+    refreshSiteConfig();
 
     const visitorToken = getOrCreateVisitorToken();
     fetchJsonSafe<{ uniqueVisitors?: number }>('/api/analytics/visit', {
@@ -186,7 +278,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUniqueVisitors(res.data.uniqueVisitors);
       }
     });
-  }, []);
+  }, [refreshCategories, refreshSiteConfig]);
 
   // Sync user's public profile to Firestore for Forum / Messenger
   const syncFirestoreProfile = useCallback(async (user: User) => {
@@ -506,6 +598,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         firebaseUser,
         dbUser,
         isAdmin,
+        adminToken,
+        setAdminToken,
         authLoading,
         getIdToken,
         loginWithGoogle,
@@ -517,6 +611,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         wishlist,
         toggleWishlist,
         categories,
+        refreshCategories,
+        siteConfig,
+        refreshSiteConfig,
+        getQrUrl,
+        trackLinkClick,
         uniqueVisitors,
         toasts,
         showToast,

@@ -38,7 +38,7 @@ interface CatalogPageProps {
 }
 
 export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
-  const { route, navigate, categories, downloadProtectedFile } = useApp();
+  const { route, navigate, categories, downloadProtectedFile, trackLinkClick } = useApp();
 
   const urlParams = new URLSearchParams(route.split('?')[1] || '');
   const [level, setLevel] = useState<string>(urlParams.get('level') || '');
@@ -391,6 +391,13 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
                 href="https://docs.google.com/spreadsheets/u/0/create"
                 target="_blank"
                 rel="noreferrer"
+                onClick={() =>
+                  trackLinkClick(
+                    'gsheets-create',
+                    'สร้าง Google Sheets ใหม่บน Google จริง',
+                    'https://docs.google.com/spreadsheets/u/0/create'
+                  )
+                }
                 className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold inline-flex items-center gap-2 shadow-md"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -400,6 +407,13 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
                 href="https://docs.google.com/spreadsheets/u/0/"
                 target="_blank"
                 rel="noreferrer"
+                onClick={() =>
+                  trackLinkClick(
+                    'gsheets-home',
+                    'เปิดหน้าคลัง Google Sheets ของคุณ',
+                    'https://docs.google.com/spreadsheets/u/0/'
+                  )
+                }
                 className="px-5 py-3 rounded-xl border border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-sm font-semibold inline-flex items-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -444,6 +458,13 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
                 href="https://www.appsheet.com/"
                 target="_blank"
                 rel="noreferrer"
+                onClick={() =>
+                  trackLinkClick(
+                    'appsheet-platform',
+                    'เปิดแพลตฟอร์ม Google AppSheet',
+                    'https://www.appsheet.com/'
+                  )
+                }
                 className="px-5 py-3 rounded-xl border border-orange-300 dark:border-orange-800 text-sm font-semibold inline-flex items-center gap-2"
               >
                 <ExternalLink className="w-4 h-4 text-orange-500" />
