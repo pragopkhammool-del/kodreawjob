@@ -11,6 +11,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchJsonSafe, getLocalProductDetail } from '../lib/catalogClient';
 import { Product, Review } from '../types';
 
 interface ProductDetailData extends Product {
@@ -38,12 +39,20 @@ export function ProductDetailPage({ slug }: { slug: string }) {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
-    fetch(`/api/products/${slug}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setProduct(data))
-      .catch(() => setProduct(null))
-      .finally(() => setLoading(false));
+    fetchJsonSafe<ProductDetailData>(`/api/products/${slug}`).then((res) => {
+      if (!active) return;
+      if (res.ok && res.data && res.data.slug) {
+        setProduct(res.data);
+      } else {
+        setProduct(getLocalProductDetail(slug));
+      }
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
   }, [slug]);
 
   const handleFreeDownload = async () => {

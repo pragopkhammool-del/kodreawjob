@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchJsonSafe, queryLocalProducts } from '../lib/catalogClient';
 import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
 
@@ -162,16 +163,20 @@ export function HomePage() {
   const [testimonialOffset, setTestimonialOffset] = useState(0);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
-    fetch('/api/products?featured=true&limit=8')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.items)) {
-          setFeaturedProducts(data.items.slice(0, 8));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetchJsonSafe<{ items?: Product[] }>('/api/products?featured=true&limit=8').then((res) => {
+      if (!active) return;
+      if (res.ok && Array.isArray(res.data.items) && res.data.items.length > 0) {
+        setFeaturedProducts(res.data.items.slice(0, 8));
+      } else {
+        setFeaturedProducts(queryLocalProducts({ featured: true, limit: 8 }).items);
+      }
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleHeroSearch = (e: React.FormEvent) => {

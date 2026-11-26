@@ -20,6 +20,12 @@ import {
   googleAuthProvider,
   testFirestoreConnection,
 } from '../lib/firebase';
+import {
+  downloadClientWorkbookFallback,
+  fetchJsonSafe,
+  getLocalCategories,
+  resolveApiUrl,
+} from '../lib/catalogClient';
 import { Category, DbUser, Product, ToastMessage } from '../types';
 
 interface AppContextValue {
@@ -159,26 +165,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     testFirestoreConnection();
 
-    fetch('/api/categories')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (Array.isArray(data)) setCategories(data);
-      })
-      .catch(() => {});
+    fetchJsonSafe<Category[]>('/api/categories').then((res) => {
+      if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        setCategories(res.data);
+      } else {
+        setCategories(getLocalCategories());
+      }
+    });
 
     const visitorToken = getOrCreateVisitorToken();
-    fetch('/api/analytics/visit', {
+    fetchJsonSafe<{ uniqueVisitors?: number }>('/api/analytics/visit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visitorToken }),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data.uniqueVisitors === 'number') {
-          setUniqueVisitors(data.uniqueVisitors);
-        }
-      })
-      .catch(() => {});
+    }).then((res) => {
+      if (res.ok && typeof res.data.uniqueVisitors === 'number') {
+        setUniqueVisitors(res.data.uniqueVisitors);
+      }
+    });
   }, []);
 
   // Sync user's public profile to Firestore for Forum / Messenger
@@ -304,7 +308,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const res = await fetch(downloadUrl, {
+        const res = await fetch(resolveApiUrl(downloadUrl), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.status === 401) {
@@ -360,10 +364,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const res = await fetch(`/api/products/${product.slug}/free-download`, {
+        const res = await fetch(resolveApiUrl(`/api/products/${product.slug}/free-download`), {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.toLowerCase().includes('application/json')) {
+          downloadClientWorkbookFallback(product);
+          showToast({
+            type: 'success',
+            title: 'ดาวน์โหลดไฟล์ Excel สำเร็จ',
+            description: product.title,
+          });
+          return true;
+        }
         const data = await res.json();
         if (res.ok && data.downloadUrl) {
           showToast({
@@ -379,8 +393,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         showToast({ type: 'error', title: data.error || 'ไม่สามารถดาวน์โหลดได้' });
         return false;
       } catch {
-        showToast({ type: 'error', title: 'เกิดข้อผิดพลาดในการดาวน์โหลด' });
-        return false;
+        downloadClientWorkbookFallback(product);
+        showToast({
+          type: 'success',
+          title: 'ดาวน์โหลดไฟล์ Excel สำเร็จ',
+          description: product.title,
+        });
+        return true;
       }
     },
     [downloadProtectedFile, getIdToken, showToast]

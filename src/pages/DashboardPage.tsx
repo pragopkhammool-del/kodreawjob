@@ -10,6 +10,7 @@ import {
   User,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchJsonSafe, queryLocalProducts } from '../lib/catalogClient';
 import { OrderDTO, Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
 
@@ -52,14 +53,13 @@ export function DashboardPage({ lookupToken }: { lookupToken?: string }) {
       setWishedProducts([]);
       return;
     }
-    fetch('/api/products?limit=100')
-      .then((r) => r.json())
-      .then((d) => {
-        if (Array.isArray(d.items)) {
-          setWishedProducts(d.items.filter((p: Product) => wishlist.includes(p.id)));
-        }
-      })
-      .catch(() => {});
+    fetchJsonSafe<{ items?: Product[] }>('/api/products?limit=100').then((res) => {
+      const items =
+        res.ok && Array.isArray(res.data.items)
+          ? res.data.items
+          : queryLocalProducts({ limit: 100 }).items;
+      setWishedProducts(items.filter((p) => wishlist.includes(p.id)));
+    });
   }, [wishlist]);
 
   const handleOrderLookup = async (e: React.FormEvent) => {

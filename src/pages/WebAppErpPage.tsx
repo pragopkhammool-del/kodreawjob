@@ -31,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchJsonSafe } from '../lib/catalogClient';
 import { ERP_MODULES, ErpModuleMeta } from '../data/erpModulesConfig';
 import {
   BarcodeSvg,
@@ -279,11 +280,140 @@ export function WebAppErpPage() {
     try {
       const token = await getIdToken();
       const endpoint = token ? '/api/erp/workspace' : '/api/erp/showcase';
-      const res = await fetch(endpoint, {
+      const result = await fetchJsonSafe<any>(endpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error('Load failed');
-      const data = await res.json();
+      if (!result.ok) {
+        // Fallback showcase state for static edge hosting (e.g. Cloudflare Workers Assets)
+        setIsDemo(true);
+        const fallbackCompany: ErpCompanyInfo = {
+          id: 1,
+          ownerUid: 'showcase-demo',
+          companyName: 'บริษัท กดแล้วจบ โซลูชันส์ จำกัด',
+          companyNameEn: 'Kodraewjob Solutions Co., Ltd.',
+          taxId: '0105568001234',
+          branchName: 'สำนักงานใหญ่',
+          address: '99/88 อาคารดิจิทัลทาวเวอร์ ถ.พระราม 9 เขตห้วยขวาง กรุงเทพฯ 10310',
+          phone: '02-999-8888',
+          email: 'contact@kodraewjob.th',
+          website: 'https://kodraewjob.th',
+          logoUrl: '/assets/aistudio/810624000_983971044712451_6466500635178443708_n_81f9a476.jpg',
+          vatRate: 7,
+          whtRate: 3,
+          currency: 'THB',
+          prefixConfigJson: JSON.stringify(DEFAULT_PREFIXES),
+          bankInfoJson: JSON.stringify({
+            bankName: 'ธนาคารกสิกรไทย (KBANK)',
+            accountNo: '081-9-99888-8',
+            accountName: 'บริษัท กดแล้วจบ โซลูชันส์ จำกัด',
+          }),
+        };
+        setCompany(fallbackCompany);
+        setUsage({
+          packageCode: 'trial',
+          packageName: 'FREE TRIAL (ทดลองใช้งาน 1 เดือน)',
+          packageBadge: 'ทดลองฟรี 30 วัน',
+          price: 0,
+          billingCycle: 'trial_30d',
+          status: 'Trial',
+          isTrial: true,
+          isExpired: false,
+          daysRemaining: 30,
+          expiryAlert: null,
+          trialStartAt: new Date().toISOString(),
+          trialEndAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+          expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+          recordsUsed: 12,
+          recordsLimit: 99,
+          recordsPct: 12,
+          usersUsed: 1,
+          usersLimit: 1,
+          usersPct: 100,
+          storageUsedBytes: 512000,
+          storageUsedMb: 0.5,
+          storageLimitMb: 30,
+          storagePct: 2,
+          storageHealth: 'ok',
+        });
+        setInventory([
+          {
+            id: 1,
+            sku: 'SKU-1001',
+            barcode: '885900100101',
+            name: 'ชุดเทมเพลต Excel ERP องค์กร',
+            category: 'Software & Template',
+            brand: 'Kodraewjob',
+            unit: 'ชุด',
+            warehouse: 'คลังหลัก (HQ)',
+            location: 'A-01',
+            supplier: 'Kodraewjob Lab',
+            costPrice: 90,
+            sellPrice: 199,
+            stockQty: 120,
+            minStock: 10,
+            maxStock: 500,
+            reorderPoint: 20,
+          },
+          {
+            id: 2,
+            sku: 'SKU-1002',
+            barcode: '885900100102',
+            name: 'เครื่องสแกนบาร์โค้ดไร้สาย 2D',
+            category: 'POS Hardware',
+            brand: 'Zebra',
+            unit: 'เครื่อง',
+            warehouse: 'คลังหลัก (HQ)',
+            location: 'B-03',
+            supplier: 'Tech Supply TH',
+            costPrice: 1250,
+            sellPrice: 1890,
+            stockQty: 18,
+            minStock: 5,
+            maxStock: 50,
+            reorderPoint: 8,
+          },
+        ]);
+        setMovements([]);
+        setRecords([
+          {
+            id: 1,
+            moduleKey: 'sales_docs',
+            docNumber: 'INV-2026-0001',
+            title: 'ค่าบริการติดตั้งระบบ SaaS ERP รายปี',
+            partyName: 'บจก. สยามเฟอร์นิเจอร์',
+            categoryOrDept: 'ฝ่ายขายองค์กร',
+            status: 'paid',
+            amount: 15900,
+            qty: 1,
+            dateStr: new Date().toISOString().slice(0, 10),
+            dueDateStr: null,
+            payloadJson: JSON.stringify({ vatIncluded: true }),
+            createdBy: 'ระบบตัวอย่าง',
+          },
+        ]);
+        setAuditLogs([]);
+        setTeam([]);
+        setCompanyForm({
+          companyName: fallbackCompany.companyName,
+          companyNameEn: fallbackCompany.companyNameEn || '',
+          taxId: fallbackCompany.taxId,
+          branchName: fallbackCompany.branchName,
+          address: fallbackCompany.address,
+          phone: fallbackCompany.phone,
+          email: fallbackCompany.email,
+          website: fallbackCompany.website || '',
+          vatRate: '7',
+          whtRate: '3',
+          bankName: 'ธนาคารกสิกรไทย (KBANK)',
+          accountNo: '081-9-99888-8',
+          accountName: fallbackCompany.companyName,
+          prefixes: { ...DEFAULT_PREFIXES },
+        });
+        setLoading(false);
+        return;
+      }
+
+      const data = result.data;
       setIsDemo(Boolean(data.isDemo));
       setCompany(data.company);
       setUsage(data.usage || null);
@@ -335,14 +465,105 @@ export function WebAppErpPage() {
   }, [loadWorkspace, dbUser?.uid]);
 
   useEffect(() => {
-    fetch('/api/erp/packages')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.packages)) {
-          setPackages(data.packages);
-        }
-      })
-      .catch(() => {});
+    fetchJsonSafe<{ packages?: ErpPackageItem[] }>('/api/erp/packages').then((res) => {
+      if (res.ok && Array.isArray(res.data.packages) && res.data.packages.length > 0) {
+        setPackages(res.data.packages);
+      } else {
+        setPackages([
+          {
+            code: 'basic',
+            name: 'BASIC',
+            badge: 'เริ่มต้นใช้งานจริง',
+            price: 250,
+            billingCycle: 'monthly',
+            durationDays: 30,
+            maxStorageMb: 30,
+            maxUsers: 1,
+            maxRecords: 99,
+            features: ['Storage 30 MB · 1 User · 99 Records'],
+            isPopular: false,
+          },
+          {
+            code: 'standard',
+            name: 'STANDARD',
+            badge: 'คุ้มค่า SME',
+            price: 350,
+            billingCycle: 'monthly',
+            durationDays: 30,
+            maxStorageMb: 35,
+            maxUsers: 2,
+            maxRecords: 199,
+            features: ['Storage 35 MB · 2 Users · 199 Records'],
+            isPopular: false,
+          },
+          {
+            code: 'professional',
+            name: 'PROFESSIONAL',
+            badge: 'ยอดนิยม 🔥',
+            price: 550,
+            billingCycle: 'monthly',
+            durationDays: 30,
+            maxStorageMb: 50,
+            maxUsers: 5,
+            maxRecords: 600,
+            features: ['Storage 50 MB · 5 Users · 600 Records'],
+            isPopular: true,
+          },
+          {
+            code: 'business',
+            name: 'BUSINESS',
+            badge: 'ธุรกิจเติบโต',
+            price: 990,
+            billingCycle: 'monthly',
+            durationDays: 30,
+            maxStorageMb: 100,
+            maxUsers: 10,
+            maxRecords: 3000,
+            features: ['Storage 100 MB · 10 Users · 3,000 Records'],
+            isPopular: false,
+          },
+          {
+            code: 'enterprise',
+            name: 'ENTERPRISE',
+            badge: 'องค์กรขนาดกลาง-ใหญ่',
+            price: 1500,
+            billingCycle: 'monthly',
+            durationDays: 30,
+            maxStorageMb: 500,
+            maxUsers: -1,
+            maxRecords: 15000,
+            features: ['Storage 500 MB · Unlimited Users · 15,000 Records'],
+            isPopular: false,
+          },
+          {
+            code: 'enterprise_annual_saver',
+            name: 'ENTERPRISE SAVER (รายปี)',
+            badge: 'ประหยัด 2,100฿/ปี',
+            price: 15900,
+            billingCycle: 'yearly',
+            durationDays: 365,
+            maxStorageMb: 500,
+            maxUsers: -1,
+            maxRecords: 15000,
+            features: ['Storage 500 MB · Unlimited Users · 15,000 Records'],
+            isPopular: false,
+          },
+          {
+            code: 'enterprise_yearly',
+            name: 'ENTERPRISE YEARLY UNLIMITED',
+            badge: 'ไม่จำกัดทั้งหมด',
+            price: 19000,
+            billingCycle: 'yearly',
+            durationDays: 365,
+            maxStorageMb: -1,
+            maxUsers: -1,
+            maxRecords: -1,
+            features: ['Unlimited Storage · Unlimited Users · Unlimited Records'],
+            isPopular: false,
+          },
+        ]);
+      }
+    });
 
     const params = new URLSearchParams(window.location.search);
     const planParam = params.get('plan');

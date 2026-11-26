@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchJsonSafe, queryLocalProducts } from '../lib/catalogClient';
 import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
 
@@ -63,6 +64,7 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
   }, [route, initialCategory]);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
     const qs = new URLSearchParams();
     if (level) qs.set('level', level);
@@ -72,17 +74,33 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
     qs.set('page', String(page));
     qs.set('limit', '12');
 
-    fetch(`/api/products?${qs.toString()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setProducts(Array.isArray(data.items) ? data.items : []);
-        setTotal(Number(data.total || 0));
-        setTotalPages(Number(data.totalPages || 1));
-      })
-      .catch(() => {
-        setProducts([]);
-      })
-      .finally(() => setLoading(false));
+    fetchJsonSafe<{ items?: Product[]; total?: number; totalPages?: number }>(
+      `/api/products?${qs.toString()}`
+    ).then((res) => {
+      if (!active) return;
+      if (res.ok && Array.isArray(res.data.items)) {
+        setProducts(res.data.items);
+        setTotal(Number(res.data.total || res.data.items.length));
+        setTotalPages(Number(res.data.totalPages || 1));
+      } else {
+        const local = queryLocalProducts({
+          level,
+          category,
+          search,
+          sort,
+          page,
+          limit: 12,
+        });
+        setProducts(local.items);
+        setTotal(local.total);
+        setTotalPages(local.totalPages);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
   }, [level, category, search, sort, page]);
 
   const resetFilters = () => {
