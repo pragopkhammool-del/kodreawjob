@@ -288,8 +288,8 @@ export function Footer() {
               </button>
             </li>
             <li>
-              <button onClick={() => navigate('/category/google-sheets')} className="hover:text-orange-400 transition-colors">
-                Google Sheets ออนไลน์
+              <button onClick={() => navigate('/google-sheets')} className="hover:text-orange-400 transition-colors">
+                Google Sheets &amp; ตารางเวลาทำงาน
               </button>
             </li>
             <li>
@@ -324,8 +324,13 @@ export function Footer() {
               </button>
             </li>
             <li>
+              <button onClick={() => navigate('/blog')} className="hover:text-orange-400 transition-colors">
+                บทความ IT &amp; คู่มือสอนทำ
+              </button>
+            </li>
+            <li>
               <button onClick={() => navigate('/about')} className="hover:text-orange-400 transition-colors">
-                เกี่ยวกับเรา &amp; บทความ
+                เกี่ยวกับเรา
               </button>
             </li>
           </ul>

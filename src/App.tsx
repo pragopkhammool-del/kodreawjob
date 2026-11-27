@@ -16,9 +16,11 @@ import { ForumPage } from './pages/ForumPage';
 import { WebAppErpPage } from './pages/WebAppErpPage';
 import { LearnFormulasPage } from './pages/LearnFormulasPage';
 import { WebAppsDemoPage } from './pages/WebAppsDemoPage';
+import { ExcelTemplatesLibraryPage } from './pages/ExcelTemplatesLibraryPage';
+import { BlogPage } from './pages/BlogPage';
+import { GoogleSheetsPage } from './pages/GoogleSheetsPage';
 import {
   AboutPage,
-  BlogPage,
   CoffeeSupportPage,
   ContactPage,
   LegalDocumentPage,
@@ -38,6 +40,16 @@ function MainRouter() {
   }
   if (pathname === '/webapps-demo') {
     return <WebAppsDemoPage />;
+  }
+  if (
+    pathname === '/excel-templates' ||
+    pathname === '/project-management-templates' ||
+    pathname === '/project-templates'
+  ) {
+    return <ExcelTemplatesLibraryPage />;
+  }
+  if (pathname === '/google-sheets' || pathname === '/category/google-sheets') {
+    return <GoogleSheetsPage />;
   }
   if (pathname === '/coffee') {
     return <CoffeeSupportPage />;
@@ -79,6 +91,10 @@ function MainRouter() {
   }
   if (pathname === '/blog') {
     return <BlogPage />;
+  }
+  if (pathname.startsWith('/blog/')) {
+    const slug = pathname.replace('/blog/', '');
+    return <BlogPage slug={slug} />;
   }
   if (pathname === '/contact') {
     return <ContactPage />;

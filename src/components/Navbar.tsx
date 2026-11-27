@@ -55,6 +55,9 @@ export function Navbar() {
 
   const navLinks = [
     { label: 'เทมเพลต', path: '/templates' },
+    { label: 'Google Sheets', path: '/google-sheets' },
+    { label: 'เทมเพลตฟรี 110+ แบบ', path: '/excel-templates' },
+    { label: 'บทความ', path: '/blog' },
     { label: 'ตัวอย่าง Web App', path: '/webapps-demo' },
     { label: 'เรียนรู้ 50 สูตร', path: '/learn' },
     { label: 'Web App ERP', path: '/webapp' },

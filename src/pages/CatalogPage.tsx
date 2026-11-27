@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Smartphone,
   TableProperties,
+  FolderKanban,
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -196,7 +197,7 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 mb-6">
         <button onClick={() => navigate('/')} className="hover:text-orange-600 dark:hover:text-orange-400">
@@ -258,6 +259,29 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
             ตัวกรอง
           </button>
         </div>
+      </div>
+
+      {/* Featured Free PM Templates Quick Bar */}
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-orange-500/10 border border-emerald-300/40 dark:border-emerald-800/40 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0 shadow-sm">
+            <FolderKanban className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              ใหม่ล่าสุด! แจกฟรี 54 เทมเพลตการจัดการโครงการ (Excel &amp; Word)
+            </p>
+            <p className="text-[11px] text-stone-600 dark:text-stone-300">
+              แผนภูมิแกนต์, WBS, CPM, งบประมาณ, เมทริกซ์ RACI, RAID Log, แดชบอร์ดติดตามงาน
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/excel-templates?cat=การจัดการโครงการ')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shrink-0 shadow-sm"
+        >
+          เปิดดู 54 เทมเพลตฟรี <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Category-Specific Interactive Showcases */}
@@ -386,7 +410,15 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
             <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
               ทำงานร่วมกันหลายคนแบบเรียลไทม์ผ่านมือถือและคอมพิวเตอร์ เพียงดาวน์โหลดไฟล์เทมเพลตด้านล่างแล้วกดเปิด Google Sheets เพื่อนำเข้า (File → Import) ใช้งานออนไลน์ได้ทันที
             </p>
-            <div className="flex flex-wrap gap-3 pt-1">
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/google-sheets')}
+                className="px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold inline-flex items-center gap-2 shadow-md"
+              >
+                <TableProperties className="w-4 h-4" />
+                ดู 11 เทมเพลตตารางเวลาทำงาน Google Sheets &amp; เครื่องมือคำนวณ
+              </button>
               <a
                 href="https://docs.google.com/spreadsheets/u/0/create"
                 target="_blank"
@@ -401,7 +433,7 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
                 className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold inline-flex items-center gap-2 shadow-md"
               >
                 <ExternalLink className="w-4 h-4" />
-                สร้าง Google Sheets ใหม่บน Google จริง
+                สร้าง Google Sheets ใหม่
               </a>
               <a
                 href="https://docs.google.com/spreadsheets/u/0/"
@@ -417,7 +449,7 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
                 className="px-5 py-3 rounded-xl border border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-sm font-semibold inline-flex items-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
-                เปิดหน้าคลัง Google Sheets ของคุณ
+                เปิดหน้าคลัง Google Sheets
               </a>
             </div>
           </div>
@@ -498,7 +530,7 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
         {/* Product Grid */}
         <div className="lg:col-span-9">
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <div
                   key={idx}
@@ -530,7 +562,7 @@ export function CatalogPage({ initialCategory = '' }: CatalogPageProps) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                 {products.map((prod) => (
                   <ProductCard key={prod.id} product={prod} />
                 ))}
